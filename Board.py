@@ -13,6 +13,7 @@ class Board():
         TODO
         """
         self.dimension = 9
+        self.middle = math.floor(self.dimension / 2)
         self.nb_white = self.nb_black = 14
 
         # We assume the standard initial configuration commonly used
@@ -33,16 +34,34 @@ class Board():
         """
         gen_board = [item for sub_list in self.board for item in sub_list]
 
+    def hexa_to_square(self, number, letter):
+        """
+        Converts the BOARD (hexagonal) to DEBUG (square) coordinates
+        Parameters:
+            letter (string): first coordinate
+            number (int): second coordinate
+        Returns:
+            x, y (tuple): DEBUG coordinates
+        """
+        char_2_num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
+                    "F": 5, "G": 6, "H": 7, "I": 8
+        }
+        y = char_2_num[letter.upper()]
+        if y in (self.middle, self.middle + 1):
+            return y, number
+        elif y > self.middle + 1:
+            return y, number + 1
+        else:
+            return y, number - 2
+
     def ask_move(self, marble_type):
         """ Ask the player his current move
         Parameters:
-            None
+            Noneg
         Return:
             type tuple of int (player's move)
         """
-        char_2_num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
-                      "F": 5, "G": 6, "H": 7, "I": 8
-        }
+
         while True:
             expr = r'^[A-I][0-8]$'
             move = input("""Pick a location on right the board
@@ -51,12 +70,13 @@ class Board():
                 print('Invalid move!')
                 continue
 
-            row = int(char_2_num[move[0].upper()]) # converts letter to number
-            # conversion needed to match the actual board 
-            col = int(move[1]) + 3 if int(move[1]) <= 5 else 6 - int(move[1])
+            y, x = move
+            # conversion needed to match the actual board
+            row, col = self.hexa_to_square(int(x), y)
             current_move = self.board[row][col]
             # check if the player can play here
             if current_move == 0 or current_move == 1 or current_move != marble_type:
+                print(row, col, current_move)
                 print("You cannot play here!")
                 continue
             break
@@ -76,7 +96,7 @@ class Board():
         """
         TODO
         """
-        row, col = move[0], move[1]
+        row, col = move
         print(row, col)
         print(self.board[row][col])
 
@@ -88,9 +108,11 @@ class Board():
                 "SE": (row + 1, col + 1), 
                 "SW": (row + 1, col)
         }
+        print("move=", move)
         x, y = disp[orientation.upper()]
+        print("x, y=", x, y)
         self.board[x][y] = marble_type
-        self.board[row][col] = 0
+        self.board[row][col] = 1 # the spot becomes empty
 
     def __str__(self):
         """
@@ -108,29 +130,28 @@ class Board():
         # 2: w = white marble
         # 3: b = black marble
         num_char = {"0": "f", "1": "e", "2": "w", "3": "b"}
-        mid_point = math.floor(self.dimension / 2)
 
         j = 1
-        k = mid_point
+        k = self.middle
         l = self.dimension
         sp = " " # space
 
-        current_board = f"{7 *sp} DEBUG {20 * sp} BOARD" + "\n" # first line
+        current_board = f"{7 *sp} DEBUG {20 * sp} BOARD\n" # first line
         for i in range(self.dimension):
             l_row = list(num_char[str(e)] if e != 0 else " " for e in self.board[i])
-            current_board += f"{i} {sp.join(l_row)} {4 * sp}" + "|   "
+            current_board += f"{i} {sp.join(l_row)} {4 * sp}|   "
             letter = str(chr(65 + i)) # chr(65) = "A"
-            if i < mid_point:
-                str_to_add = f"{k * sp}{letter} {sp.join(l_row).rstrip()}" 
-                current_board += str_to_add + "\n"
+            if i < self.middle:
+                str_to_add = f"{k * sp}{letter} {sp.join(l_row).rstrip()}\n"
+                current_board += str_to_add
                 k -= 1
-            elif i > mid_point:
-                str_to_add = f"{j * sp}{letter} {sp.join(l_row).lstrip()} {l}"
-                current_board += str_to_add + "\n"
+            elif i > self.middle:
+                str_to_add = f"{j * sp}{letter} {sp.join(l_row).lstrip()} {l}\n"
+                current_board += str_to_add
                 j += 1
                 l -= 1
             else:
-                current_board += f"{letter} {sp.join(l_row)}" + "\n"
+                current_board += f"{letter} {sp.join(l_row)}\n"
                 
         # numbers bottom debug
         l_number = list(str(e) for e in range(0, 9))
@@ -144,3 +165,5 @@ if __name__ == "__main__":
     C.print(B, style="bold green")
     move, orientation = B.ask_move(3)
     B.move_marble(move, orientation, 3)
+    C.print(B, style="bold green")
+    
