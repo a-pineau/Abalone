@@ -35,6 +35,55 @@ class Board():
         """
         gen_board = [item for sub_list in self.board for item in sub_list]
 
+
+    def ask_move(self, marble_type):
+        """ Ask the player his current move
+        Parameters:
+            marble_type
+        Return:
+            type tuple of int (player's move)
+        """
+
+        while True:
+            expr = r"^([A-Z][1-9]\s?){1,3}$" # A1B2C5, A1 B2 C5 or A1B1, A1 B1
+            move = input("Pick your marble(s) (row-col: A-I, 0-8): ")
+            # check if the move is correct
+            if re.match(expr, move, re.IGNORECASE) is None:  
+                print('Invalid coordinates!')
+                continue
+            # extraction of marble couples
+            couples = self.hexa_to_square(tuple(sliced(move, 2)))
+
+            # check validity
+            a = self.check_validity_move(couples)
+
+        # if multiple marbles are moved w/o pushing
+        # the orientations are restricted
+        ori = ["W", "E", "NW", "SE"]
+        if len(couples / 2) == 1:
+            ori.extend(["NE", "SW"]) # otherwise we consider all of them
+
+        
+        # check if the orientation is correct
+        while True:
+            sep = ","
+            orientation = input(f"Orientation ({sep.join(ori)}): ")
+            if orientation.upper() not in ori: 
+                print("Invalid orientation!")
+                continue
+            break
+
+        return (row, col), orientation
+
+    def check_validity_move(self, couples):
+        """
+        TODO
+        """
+        list_marbles = tuple(self.board[row][col] for row, col in couples)
+        print(list_marbles)
+            
+
+
     def hexa_to_square(self, couples_hexa):
         """
         Converts the BOARD coordinates (hexagonal) to DEBUG (square) coordinates
@@ -45,11 +94,11 @@ class Board():
             x, y (tuple): DEBUG coordinates
         """
         char_2_num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
-                      "F": 5, "G": 6, "H": 7, "I": 8
+                    "F": 5, "G": 6, "H": 7, "I": 8
         }
         couples_square = []
         for element in couples_hexa:
-            x, y = element
+            x, y = element.upper()
             if y in (self.middle, self.middle + 1):
                 couples_square.append((char_2_num[x], int(y)))
             else:
@@ -58,46 +107,6 @@ class Board():
                 )
 
         return couples_square
-
-
-    def ask_move(self, marble_type):
-        """ Ask the player his current move
-        Parameters:
-            Noneg
-        Return:
-            type tuple of int (player's move)
-        """
-
-        while True:
-            expr = r"^([A-Z][1-9]\s?){1,3}$" # A1B2C5, A1 B2 C5 or A1B1, A1 B1
-            move = input("Pick your marble(s) (row-col: A-I, 0-8): ")
-            # check if the move is correct
-            if re.match(expr, move, re.IGNORECASE) is None:  
-                print('Invalid move!')
-                continue
-            # extraction of marble couples
-            couples = tuple(sliced(move, 2))
-            print(self.hexa_to_square(couples))
-
-            # conversion needed to match the actual board
-            row, col = self.hexa_to_square(int(x), y.upper())
-            current_move = self.board[row][col]
-
-            # check if the player can play here
-            if current_move == 0 or current_move == 1 or current_move != marble_type:
-                print("You cannot play here!")
-                continue
-            break
-
-        # check if the orientation is correct
-        while True:
-            orientation = input("Orientation (E, W, NE, NW, SE, SW): ")
-            if orientation.upper() not in ["E", "W", "NE", "NW", "SE", "SW"]: 
-                print("Invalid orientation!")
-                continue
-            break
-
-        return (row, col), orientation
 
 
     def move_marble(self, move, orientation, marble_type):
@@ -116,9 +125,7 @@ class Board():
                 "SE": (row + 1, col + 1), 
                 "SW": (row + 1, col)
         }
-        print("move=", move)
         x, y = disp[orientation.upper()]
-        print("x, y=", x, y)
         self.board[x][y] = marble_type
         self.board[row][col] = 1 # the spot becomes empty
 
