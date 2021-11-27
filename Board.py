@@ -5,6 +5,7 @@ import math
 import re
 import Marble as M
 from rich.console import Console
+from more_itertools import sliced
 
 
 class Board():
@@ -34,9 +35,9 @@ class Board():
         """
         gen_board = [item for sub_list in self.board for item in sub_list]
 
-    def hexa_to_square(self, number, letter):
+    def hexa_to_square(self, couples_hexa):
         """
-        Converts the BOARD (hexagonal) to DEBUG (square) coordinates
+        Converts the BOARD coordinates (hexagonal) to DEBUG (square) coordinates
         Parameters:
             letter (string): first coordinate
             number (int): second coordinate
@@ -44,15 +45,20 @@ class Board():
             x, y (tuple): DEBUG coordinates
         """
         char_2_num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
-                    "F": 5, "G": 6, "H": 7, "I": 8
+                      "F": 5, "G": 6, "H": 7, "I": 8
         }
-        y = char_2_num[letter.upper()]
-        if y in (self.middle, self.middle + 1):
-            return y, number
-        elif y > self.middle + 1:
-            return y, number + 1
-        else:
-            return y, number - 2
+        couples_square = []
+        for element in couples_hexa:
+            x, y = element
+            if y in (self.middle, self.middle + 1):
+                couples_square.append((char_2_num[x], int(y)))
+            else:
+                couples_square.append((char_2_num[x], 
+                int(y) + char_2_num[x] - (self.middle + 1))
+                )
+
+        return couples_square
+
 
     def ask_move(self, marble_type):
         """ Ask the player his current move
@@ -63,27 +69,29 @@ class Board():
         """
 
         while True:
-            expr = r'^[A-I][0-8]$'
-            move = input("""Pick a location on right the board
-                         (row-col: A-I, 0-8): """)
-            if re.match(expr, move.upper()) is None:  # check if the move is correct
+            expr = r"^([A-Z][1-9]\s?){1,3}$" # A1B2C5, A1 B2 C5 or A1B1, A1 B1
+            move = input("Pick your marble(s) (row-col: A-I, 0-8): ")
+            # check if the move is correct
+            if re.match(expr, move, re.IGNORECASE) is None:  
                 print('Invalid move!')
                 continue
+            # extraction of marble couples
+            couples = tuple(sliced(move, 2))
+            print(self.hexa_to_square(couples))
 
-            y, x = move
             # conversion needed to match the actual board
-            row, col = self.hexa_to_square(int(x), y)
+            row, col = self.hexa_to_square(int(x), y.upper())
             current_move = self.board[row][col]
+
             # check if the player can play here
             if current_move == 0 or current_move == 1 or current_move != marble_type:
-                print(row, col, current_move)
                 print("You cannot play here!")
                 continue
             break
 
         # check if the orientation is correct
         while True:
-            orientation = input("Pick an orientation (E, W, NE, NW, SE, SW): ")
+            orientation = input("Orientation (E, W, NE, NW, SE, SW): ")
             if orientation.upper() not in ["E", "W", "NE", "NW", "SE", "SW"]: 
                 print("Invalid orientation!")
                 continue
@@ -159,11 +167,14 @@ class Board():
         current_board += f"  {sp.join(l_number)} {13 * sp} 1 2 3 4 5"
         return current_board
 
-if __name__ == "__main__": 
+def main():
     C = Console()
     B = Board()
     C.print(B, style="bold green")
     move, orientation = B.ask_move(3)
     B.move_marble(move, orientation, 3)
     C.print(B, style="bold green")
-    
+        
+
+if __name__ == "__main__": 
+    main()
