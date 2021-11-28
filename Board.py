@@ -15,7 +15,7 @@ class Board():
         """
         self.dimension = 9
         self.middle = math.floor(self.dimension / 2)
-        self.nb_white = self.nb_black = 14
+        self.marbles = {2: 14, 3: 14}
 
         # We assume the standard initial configuration commonly used
         # So its hard-coded
@@ -36,51 +36,45 @@ class Board():
         gen_board = [item for sub_list in self.board for item in sub_list]
 
 
-    def ask_move(self, marble_type):
+    def ask_move(self, color):
         """ Ask the player his current move
         Parameters:
-            marble_type
+            color
         Return:
             type tuple of int (player's move)
         """
 
         while True:
-            expr = r"^([A-Z][1-9]\s?){1,3}$" # A1B2C5, A1 B2 C5 or A1B1, A1 B1
+            expr = r"^([A-Z][1-9]\s?){1,3}$" 
             move = input("Pick your marble(s) (row-col: A-I, 0-8): ")
             # check if the move is correct
             if re.match(expr, move, re.IGNORECASE) is None:  
                 print('Invalid coordinates!')
                 continue
-            # extraction of marble couples
-            couples = self.hexa_to_square(tuple(sliced(move, 2)))
 
-            # check validity
-            a = self.check_validity_move(couples)
+            # extraction of marble couples
+            couples = self.hexa_to_square(tuple(sliced(move, 2))) 
+            values = tuple(self.board[row][col] for row, col in couples)
+            if not all(e == color for e in values):
+                print("You gotta chose your own marble!")
+                continue
+            break
 
         # if multiple marbles are moved w/o pushing
         # the orientations are restricted
         ori = ["W", "E", "NW", "SE"]
-        if len(couples / 2) == 1:
+        if len(couples) == 1:
             ori.extend(["NE", "SW"]) # otherwise we consider all of them
-
-        
+            
         # check if the orientation is correct
         while True:
-            sep = ","
-            orientation = input(f"Orientation ({sep.join(ori)}): ")
+            sep = ", "
+            orientation = input(f"Orientation ({sep.join(ori)})?: ")
             if orientation.upper() not in ori: 
                 print("Invalid orientation!")
                 continue
-            break
-
-        return (row, col), orientation
-
-    def check_validity_move(self, couples):
-        """
-        TODO
-        """
-        list_marbles = tuple(self.board[row][col] for row, col in couples)
-        print(list_marbles)
+            
+            return couples, orientation
             
 
 
@@ -109,25 +103,40 @@ class Board():
         return couples_square
 
 
-    def move_marble(self, move, orientation, marble_type):
+    def move_marble(self, couples, orientation, color):
         """
         TODO
         """
-        row, col = move
-        print(row, col)
-        print(self.board[row][col])
+        new_couples = []
+        enemy = color - 1 if color == 3 else color + 1
 
         # displacements with black marbles as reference
-        disp = {"E": (row, col + 1), 
-                "W": (row, col - 1), 
-                "NE": (row - 1, col),
-                "NW": (row - 1, col - 1), 
-                "SE": (row + 1, col + 1), 
-                "SW": (row + 1, col)
+        disp = {"E": lambda r, c: (r, c + 1),
+                "W": lambda r, c: (r, c - 1), 
+                "NE": lambda r, c: (r - 1, c),
+                "NW": lambda r, c: (r - 1, c - 1),
+                "SE": lambda r, c: (r + 1, c + 1),
+                "SW": lambda r, c: (r + 1, c)
         }
-        x, y = disp[orientation.upper()]
-        self.board[x][y] = marble_type
-        self.board[row][col] = 1 # the spot becomes empty
+
+        # not using list comprehension for better readibility
+        for element in couples:
+            r, c = element
+            n_r, n_c = disp[orientation.upper()](r, c)
+            
+            if self.board[n_r][n_c] == color or self.board[n_r][n_c] == enemy:
+                print("NO!")
+                continue
+
+            if self.board[n_r][n_c] == 0:
+                self.marbles[color] -= 1
+                print("Suicide! GGs")
+                continue
+
+            # updating board
+            self.board[r][c] = 1
+            self.board[n_r][n_c] = color
+            
 
     def __str__(self):
         """
@@ -144,7 +153,7 @@ class Board():
         # 1: e = empty spot
         # 2: w = white marble
         # 3: b = black marble
-        num_char = {"0": "f", "1": "e", "2": "w", "3": "b"}
+        num_char = {"0": "f", "1": "o", "2": "w", "3": "b"}
 
         j = 1
         k = self.middle
@@ -178,8 +187,8 @@ def main():
     C = Console()
     B = Board()
     C.print(B, style="bold green")
-    move, orientation = B.ask_move(3)
-    B.move_marble(move, orientation, 3)
+    couples, orientation = B.ask_move(3)
+    B.move_marble(couples, orientation, 3)
     C.print(B, style="bold green")
         
 
