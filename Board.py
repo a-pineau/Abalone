@@ -9,6 +9,9 @@ from more_itertools import sliced
 
 
 class Board():
+
+    err_msg_style = "bold red"
+
     def __init__(self):
         """
         TODO
@@ -24,8 +27,8 @@ class Board():
                       [2, 2, 2, 2, 2, 2, 0, 0, 0],
                       [1, 1, 2, 2, 2, 1, 1, 0, 0],
                       [1, 1, 1, 1, 1, 1, 1, 1, 0],
-                      [1, 1, 2, 1, 1, 1, 1, 1, 1],
-                      [0, 1, 1, 2, 3, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [0, 1, 1, 3, 3, 1, 1, 1, 1],
                       [0, 0, 1, 1, 3, 3, 3, 1, 1],
                       [0, 0, 0, 3, 3, 3, 3, 3, 3],
                       [0, 0, 0, 0, 3, 3, 3, 3, 3]]
@@ -50,7 +53,10 @@ class Board():
             move = input("Pick your marble(s) (row-col: A-I, 0-8): ")
             # check if the move is correct
             if re.match(expr, move, re.IGNORECASE) is None:  
-                self.console.print("Invalid selection!", style="bold red")
+                self.console.print(
+                    "Invalid selection!",
+                     style=self.err_msg_style
+                )
                 continue
 
             # pair values construction
@@ -76,7 +82,7 @@ class Board():
                 if not diagonal and not horizontal:
                     self.console.print(
                         "You gotta select 3 linked marbles along a line!",
-                        style="bold red"
+                        style=self.err_msg_style
                     )
                     continue
 
@@ -87,7 +93,7 @@ class Board():
             if not all(e == color for e in values):
                 self.console.print(
                     "You gotta chose your own marble!",
-                    style="bold red"
+                    style=self.err_msg_style
                 )
                 continue
             break
@@ -103,7 +109,7 @@ class Board():
             sep = ", "
             orientation = input(f"Orientation ({sep.join(ori)})?: ").upper()
             if orientation.upper() not in ori: 
-                self.console.print("Invalid orientation!", style="bold red")
+                self.console.print("Invalid orientation!", self.err_msg_style)
                 continue
             
             return couples, orientation
@@ -143,64 +149,43 @@ class Board():
 
         for element in couples:
             r, c = element
-            sumito = False
+            marbles_group = {(r, c): 1} # the first spot becomes empty
+            colors = []
 
-            if len(couples) == 1: # pushing marbles
-                marbles_group = {(r, c): 1}
-                colors = [self.board[r][c]]
-                while True:
-                    n_r, n_c = self.get_next_spot(r, c, orientation) # next spot
-
-                    # check if more than 3 marbles are being moved (forbidden)
-                    # or if a forbidden sumito is being performed (non-free spot after last enemy)
-                    if all(e == color for e in colors) and len(colors) > 3:
-                        if sumito:
-                            self.console.print(
-                                "You cannot perform a sumito like this!", 
-                                style="bold red"
-                            )
-                        else:
-                            self.console.print(
-                                "You cannot move more than 3 marbles!", 
-                                style="bold red"
-                            )
-                        self.ask_move(color)
-                        return
-
-                    # if we keep finding the same color
-                    # we add to the marble group and associate the next color
-                    if self.board[n_r][n_c] == color:
-                        colors.append(self.board[n_r][n_c])
-                        marbles_group[(n_r, n_c)] = color
-                    # a free spot has been found 
-                    elif self.board[n_r][n_c] == 1:
-                        # if we perform a sumito, the free spot becomes an enemy
-                        if sumito: 
-                            marbles_group[(n_r, n_c)] = enemy
-                        # othewise the free spot becomes the current marble
-                        else:
-                            marbles_group[(n_r, n_c)] = color
+            while True:
+                sumito = enemy in colors
+                
+                # we keep finding our own marbles
+                if self.board[r][c] == color and (r, c) not in marbles_group.keys():
+                    marbles_group[(r, c)] = color
+                # we either find an enemy or an empty spot
+                elif self.board[r][c] == enemy or self.board[r][c] == 1:
+                    marbles_group[(r, c)] = color if not sumito else enemy
+                    # if its an actual empty spot, we break the while loop
+                    if self.board[r][c] == 1:
                         break
-                    # possible valid sumito
-                    elif self.board[n_r][n_c] == enemy:
-                        colors.append(self.board[n_r][n_c])
-                        if sumito:
-                        # the enemy becomes the current marble
-                            marbles_group[(n_r, n_c)] = enemy
-                        else:
-                            marbles_group[(n_r, n_c)] = color
-                        sumito = True
 
-                    # a marble has been ejected
+                colors.append(self.board[r][c])
+
+                # check if more than 3 marbles are being moved (forbidden)
+                # or if a forbidden sumito is being performed (non-free spot after last enemy)
+                too_much_marbles = colors.count(color) > 3
+                wrong_sumito = colors.count(enemy) >= colors.count(color)
+                if too_much_marbles or wrong_sumito:
+                    if too_much_marbles:
+                        self.console.print(
+                            "You cannot move more than 3 marbles!", 
+                            style=self.err_msg_style
+                        )
                     else:
-                        if self.board[r][c] == color: # killing a own marble on purpose
-                            pass
-                        else: # killing an enemy
-                            pass
+                        self.console.print(
+                            "You cannot perform a sumito like this!", 
+                            style=self.err_msg_style
+                        )                        
+                    self.ask_move(color)
+                    return
 
-                    r, c = n_r, n_c
-
-            print(marbles_group)
+                r, c = self.get_next_spot(r, c, orientation) # next spot
 
             # updating board
             for key, value in marbles_group.items():
