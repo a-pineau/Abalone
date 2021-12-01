@@ -11,6 +11,10 @@ from more_itertools import sliced
 class Board():
 
     err_msg_style = "bold red"
+    char_2_num = {
+        "A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
+        "F": 5, "G": 6, "H": 7, "I": 8
+    }
 
     def __init__(self):
         """
@@ -28,7 +32,7 @@ class Board():
                       [1, 1, 2, 2, 2, 1, 1, 0, 0],
                       [1, 1, 1, 1, 1, 1, 1, 1, 0],
                       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                      [0, 1, 1, 3, 3, 1, 1, 1, 1],
+                      [0, 1, 1, 1, 1, 1, 1, 1, 1],
                       [0, 0, 1, 1, 3, 3, 3, 1, 1],
                       [0, 0, 0, 3, 3, 3, 3, 3, 3],
                       [0, 0, 0, 0, 3, 3, 3, 3, 3]]
@@ -67,14 +71,15 @@ class Board():
             if len(couples) > 1:
                 min_r = min(couples, key=lambda t: t[0])[0].upper()
                 max_r = max(couples, key=lambda t: t[0])[0].upper()
-                horizontal = (
+                print(max_r, min_r)
+                diagonal = (
                     len(set(e[0] for e in couples)) == 1
                     and ord(max_r) - ord(min_r) < len(couples)
                 )
 
                 min_c = min(couples, key=lambda t: t[1])[1]
                 max_c = max(couples, key=lambda t: t[1])[1]
-                diagonal = (
+                horizontal = (
                     len(set(e[1] for e in couples)) == 1 
                     and int(max_c) - int(min_c) < len(couples)
                 )
@@ -87,7 +92,8 @@ class Board():
                     continue
 
             # pair values construction
-            couples = self.hexa_to_square(couples) 
+            couples = tuple(self.hexa_to_square(c) for c in couples)
+            print(couples)
             # check if all the selected marbles have the same color
             values = tuple(self.board[row][col] for row, col in couples)
             if not all(e == color for e in values):
@@ -116,7 +122,7 @@ class Board():
             
 
 
-    def hexa_to_square(self, couples_hexa):
+    def hexa_to_square(self, coords_hexa):
         """
         Converts the BOARD coordinates (hexagonal) to DEBUG (square) coordinates
         Inputs:
@@ -125,20 +131,17 @@ class Board():
         Ouputs:
             x, y (tuple): DEBUG coordinates
         """
-        char_2_num = {
-            "A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
-            "F": 5, "G": 6, "H": 7, "I": 8
-        }
-        couples_square = []
-        for element in couples_hexa:
-            x, y = element.upper()
-            if y in (self.middle, self.middle + 1):
-                couples_square.append((char_2_num[x], int(y)))
-            else:
-                couples_square.append((char_2_num[x], 
-                int(y) + char_2_num[x] - (self.middle + 1)))
-
-        return couples_square
+        x, y = coords_hexa.upper()
+        if y in (self.middle, self.middle + 1):
+            return (
+                self.char_2_num[x], 
+                int(y)
+            )
+        else:
+            return (
+                self.char_2_num[x], 
+                int(y) + self.char_2_num[x] - (self.middle + 1)
+            )
 
 
     def move_marbles(self, couples, orientation, color):
