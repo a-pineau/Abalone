@@ -11,10 +11,8 @@ from more_itertools import sliced
 class Board():
 
     err_msg_style = "bold red"
-    char_2_num = {
-        "A": 0, "B": 1, "C": 2, "D": 3, "E": 4,
-        "F": 5, "G": 6, "H": 7, "I": 8
-    }
+    display_style = "bold blue"
+    board_style = "bold green"
 
     def __init__(self):
         """
@@ -64,24 +62,28 @@ class Board():
                 continue
 
             # pair values construction
-            couples = tuple(sliced(move, 2))
+            couples_hexa = tuple(sliced(move, 2))
+            couples_square = (self.hexa_to_square(c) for c in couples_hexa)
+            couples_square = tuple(couples_square)
 
             # check if the selection of multiple marbles is correct
             # multiple marbles must be aligned along a common axis
-            if len(couples) > 1:
-                min_r = min(couples, key=lambda t: t[0])[0].upper()
-                max_r = max(couples, key=lambda t: t[0])[0].upper()
-                print(max_r, min_r)
-                diagonal = (
-                    len(set(e[0] for e in couples)) == 1
-                    and ord(max_r) - ord(min_r) < len(couples)
+            if len(couples_hexa) > 1:
+                # test along a horizontal line
+                min_c = min(couples_hexa, key=lambda t: t[1])[1]
+                max_c = max(couples_hexa, key=lambda t: t[1])[1]
+                horizontal = (
+                    len(set(e[0] for e in couples_hexa)) == 1 
+                    and int(max_c) - int(min_c) < len(couples_hexa)
                 )
 
-                min_c = min(couples, key=lambda t: t[1])[1]
-                max_c = max(couples, key=lambda t: t[1])[1]
-                horizontal = (
-                    len(set(e[1] for e in couples)) == 1 
-                    and int(max_c) - int(min_c) < len(couples)
+                # test along a diagonal
+                min_r = min(couples_hexa, key=lambda t: t[0])[0].upper()
+                max_r = max(couples_hexa, key=lambda t: t[0])[0].upper()
+                diag_square = tuple()
+                diagonal = (
+                    len(set(e[1] for e in couples_square)) == 1
+                    and ord(max_r) - ord(min_r) < len(couples_hexa)
                 )
 
                 if not diagonal and not horizontal:
@@ -91,11 +93,8 @@ class Board():
                     )
                     continue
 
-            # pair values construction
-            couples = tuple(self.hexa_to_square(c) for c in couples)
-            print(couples)
             # check if all the selected marbles have the same color
-            values = tuple(self.board[row][col] for row, col in couples)
+            values = tuple(self.board[r][c] for r, c in couples_square)
             if not all(e == color for e in values):
                 self.console.print(
                     "You gotta chose your own marble!",
@@ -107,7 +106,7 @@ class Board():
         # if multiple marbles are moved w/o pushing
         # the orientations are restricted
         ori = ["W", "E", "NW", "SE"]
-        if len(couples) == 1:
+        if len(couples_hexa) == 1:
             ori.extend(["NE", "SW"]) # otherwise we consider all of them
             
         # check if the orientation is correct
@@ -118,7 +117,7 @@ class Board():
                 self.console.print("Invalid orientation!", self.err_msg_style)
                 continue
             
-            return couples, orientation
+            return couples_square, orientation
             
 
 
@@ -134,13 +133,13 @@ class Board():
         x, y = coords_hexa.upper()
         if y in (self.middle, self.middle + 1):
             return (
-                self.char_2_num[x], 
+                ord(x) - ord("A"), 
                 int(y)
             )
         else:
             return (
-                self.char_2_num[x], 
-                int(y) + self.char_2_num[x] - (self.middle + 1)
+                ord(x) - ord("A"), 
+                int(y) + (ord(x) - ord("A")) - (self.middle + 1)
             )
 
 
@@ -149,11 +148,31 @@ class Board():
         TODO
         """
         enemy = color - 1 if color == 3 else color + 1
+        multiple_marbles = len(couples) > 1
 
         for element in couples:
             r, c = element
             marbles_group = {(r, c): 1} # the first spot becomes empty
-            colors = []
+            colors = [] # to store the different colors (enemy or player's current color)
+
+            # we first deal w/ multiple marbles withouh pushing
+            # those marbles can only move to an empty spot
+            if multiple_marbles:
+                n_r, n_c = self.get_next_spot(r, c, orientation)
+                next_spot = self.board[n_r][n_c]
+                if next_spot == color or next_spot == enemy:
+                    self.console.print(
+                        "You cannot move your multiple marbles like this!",
+                        style=self.err_msg_style
+                    )
+                    self.ask_move(color)
+                    return
+                elif next_spot == 0:
+                    self.console.print(
+                        "Suicide! GGs",
+                        style=self.display_style
+                    )
+                    continue
 
             while True:
                 sumito = enemy in colors
@@ -163,7 +182,7 @@ class Board():
                     marbles_group[(r, c)] = color
                 # we either find an enemy or an empty spot
                 elif self.board[r][c] == enemy or self.board[r][c] == 1:
-                    marbles_group[(r, c)] = color if not sumito else enemy
+                    marbles_group[(r, c)] = enemy if sumito else color
                     # if its an actual empty spot, we break the while loop
                     if self.board[r][c] == 1:
                         break
@@ -190,10 +209,10 @@ class Board():
 
                 r, c = self.get_next_spot(r, c, orientation) # next spot
 
-            # updating board
-            for key, value in marbles_group.items():
-                row, col = key
-                self.board[row][col] = value
+        # updating board
+        for key, value in marbles_group.items():
+            row, col = key
+            self.board[row][col] = value
 
 
     def get_next_spot(self, r, c, orientation):
@@ -257,10 +276,13 @@ class Board():
 def main():
     C = Console()
     B = Board()
-    C.print(B, style="bold green")
+    C.print(B, style=B.board_style)
     couples, orientation = B.ask_move(3)
     B.move_marbles(couples, orientation, 3)
-    C.print(B, style="bold green")
+    C.print(B, style=B.board_style)
+    couples, orientation = B.ask_move(3)
+    B.move_marbles(couples, orientation, 3)
+    C.print(B, style=B.board_style)
         
 
 if __name__ == "__main__": 
