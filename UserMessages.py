@@ -6,6 +6,11 @@ from termcolor import colored
 
 def user_messages(msg):
     messages = {
+        "ERR_MOVEMENT": colored(
+            "Invalid movement!",
+            "red",
+            attrs=["bold"]
+        ),
         "ERR_INPUTS": colored(
             "Invalid inputs!", 
             "red", 
@@ -17,7 +22,7 @@ def user_messages(msg):
             attrs=["bold"]
         ),
         "ERR_WRONG_MARBLES": colored(
-            "You gotta chose your own marbles!",
+            "You gotta chose your own marble(s)!",
             "red",
             attrs=["bold"]
         ),
@@ -42,8 +47,13 @@ def user_messages(msg):
             attrs=["bold"]
         ),
         "WARN_SUICIDE": colored(
-            "Do you really want to kill your own marble?",
+            "You killed your own marble, GGs.",
             "yellow",
+            attrs=["bold"]
+        ),
+        "GG_KILLED_ENEMY": colored(
+            "You've killed an enemy marble!",
+            "green",
             attrs=["bold"]
         )
     }
