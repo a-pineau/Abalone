@@ -7,7 +7,7 @@ import re
 
 from more_itertools import sliced
 from termcolor import colored
-from UserMessages import user_messages
+from UserMessages import err_messages, info_messages, ask_messages
 
 
 class Board():
@@ -37,8 +37,8 @@ class Board():
                       [2, 2, 2, 2, 2, 2, 0, 0, 0],
                       [1, 1, 2, 2, 2, 1, 1, 0, 0],
                       [1, 1, 1, 1, 1, 1, 1, 1, 0],
-                      [1, 1, 2, 1, 1, 1, 1, 1, 1],
-                      [0, 1, 1, 2, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [0, 1, 1, 1, 1, 1, 1, 1, 1],
                       [0, 0, 1, 1, 3, 3, 3, 1, 1],
                       [0, 0, 0, 3, 3, 3, 3, 3, 3],
                       [0, 0, 0, 0, 3, 3, 3, 3, 3]]
@@ -60,53 +60,38 @@ class Board():
 
         while True:
             # type of movement (lateral or pushing)
-            move_type = input(
-                "Do you want to push marbles or perform a lateral move?\n"
-                + "P: push, L: lateral: ").upper()
+            move_type = input(ask_messages("ASK_MVT")).upper()
 
-            # correct_push = (
-            #     move_type.upper() in "LP" and
-            #     len(set(x for x in move_type if x.isdigit())) == 1
-            # )
-            if move_type.upper() not in "LP":
-                user_messages("ERR_MOVEMENT")
+            if move_type.upper() not in "PF":
+                err_messages("ERR_MOVEMENT")
                 continue
 
             if move_type == "P":
                 expr = r"^([A-Z]\s?[1-9]\s?){2}$" 
-                msg = "Select the first marble and its next position: "
+                msg = ask_messages("ASK_P_MARBLES")
             else:
-                expr = r"^([A-Z][1-9]\s?){1,3}([A-Z][1-9]){1}"
-                msg = "TODO"
+                expr = r"^([A-Z][1-9]\s?){1,3}\s?([A-Z][1-9]){1}"
+                msg = ask_messages("ASK_F_MARBLES")
+                       
 
-            positions = input(msg)
+            positions = input(colored(msg, attrs=["bold"]))
+            positions = positions.replace(" ", "")
             # check if the selection is correct
             if re.match(expr, positions, re.IGNORECASE) is None:  
-                user_messages("ERR_INPUTS")
+                err_messages("ERR_INPUTS")
                 continue
 
             # pairs value construction
             couples_hexa = tuple(sliced(positions, 2))
+            # pairs construction in the 2d list frame
+            couples_square = (self.hexa_to_square(c) for c in couples_hexa)
+            couples_square = tuple(couples_square)
 
-            # check if the selection of multiple marbles is correct
-            # multiple marbles must be aligned along a common axis
-            if move_type == "L":
-                if (
-                    not self.is_diagonal(couples_hexa)
-                    and not self.is_horizontal(couples_hexa)
-                ):
-                    user_messages("ERR_MULTIPLE_MARBLES")
-                    continue
-            
-                # pairs construction in the 2d list frame
-                couples_square = (self.hexa_to_square(c) for c in couples_hexa)
-                couples_square = tuple(couples_square)
-
-                # check if all the selected marbles have the same color
-                values = tuple(self.board[r][c] for r, c in couples_square)
-                if not all(e == color for e in values):
-                    user_messages("ERR_WRONG_MARBLES")
-                    continue
+            # check if all the selected marbles have the same color
+            values = tuple(self.board[r][c] for r, c in couples_square)
+            if not all(e == color for e in values):
+                err_messages("ERR_WRONG_MARBLES")
+                continue
             break
             
         return couples_hexa, move_type
@@ -144,8 +129,7 @@ class Board():
         if move_type == "P":
             self.push_marbles(couples, color, sequence)
         else:
-            self.move_marbles(couples, move_type)
-
+            self.move_marbles(couples, color, sequence)
 
         # Updating board
         for key, value in sequence.items():
@@ -153,123 +137,144 @@ class Board():
             self.board[row][col] = value
 
 
+    def move_marbles(self, couples, color, sequence):
+        """
+        TODO        
+        """
+        enemy = color - 1 if color == 3 else color + 1
+        friend = color 
+        marbles_group, next = list(couples[:-1]), couples[-1] 
+        print(sequence)
+
+        # range of 3 marbles, we need to find the middle one
+        # as the user provides w/ the first and the last marble
+        if len(marbles_group) >= 2:
+            mid_marble = self.get_middle_marble(marbles_group, color)
+            if not mid_marble: # in that case, the inputs arent valid
+                err_messages("ERR_MULTIPLE_MARBLES")
+                self.ask_move(color)
+                return
+            marbles_group.insert(1, mid_marble)
+        # all the selected marbles will become empty spots
+        sequence = {key: 1 for key in marbles_group}
+
+        print(marbles_group)
+        print(sequence)
+
     def push_marbles(self, couples, color, sequence):
         """
         TODO
         """
 
         free = 1
-        enemy = color - 1 if color == 3 else color + 1 # current enemy
+        friend = color
+        enemy = friend - 1 if friend == 3 else friend + 1 # current enemy
         first, next = couples # the first marble and its next spot
 
-        j = 1 if ord(first[0]) < ord(next[0]) else -1 # direction (up: 1, down: -1)
-        k = 0 if first[1] == next[1] else -j # changing indexes (or not)
         r, c = self.hexa_to_square(first) # coordinates in the square frame
 
         sequence[(r, c)] = 1 # the first marble becomes an empty spot
-        colors = [color] # storing the colors we meet
+        colors = [friend] # storing the colors we meet
 
         # we first check that the selected marble is correct 
         # it cannot be an enemy or an empty spot
-        if self.board[r][c] != color:
-            user_messages("ERR_WRONG_MARBLES")
-            self.ask_move(color)
+        if self.board[r][c] != friend:
+            err_messages("ERR_WRONG_MARBLES")
+            self.ask_move(friend)
             return
     
-        while True:
+        end_move = False # better readibilty than a while True
+        while not end_move:
             sumito = enemy in colors
             r, c = self.hexa_to_square(next)
             current_spot = self.board[r][c]
-            if current_spot in (color, enemy): 
-                colors.append(self.board[r][c])
-            print(colors)
 
+            if current_spot in (friend, enemy):  
+                colors.append(self.board[r][c])
+            
             # check if more than 3 marbles are being moved (forbidden)
             # or if a forbidden sumito is being performed (non-free spot after last enemy)
             too_much_marbles = colors.count(color) > 3
-            wrong_sumito = colors.count(enemy) >= colors.count(color)
+            wrong_sumito = colors.count(enemy) >= colors.count(friend)
 
             if too_much_marbles or wrong_sumito:
                 if too_much_marbles:
-                    user_messages("ERR_TOO_MUCH")
+                    err_messages("ERR_TOO_MUCH")
                 else:
-                    user_messages("ERR_SUMITO")                     
-                self.ask_move(color)
+                    err_messages("ERR_SUMITO")                     
+                self.ask_move(friend)
                 return
 
             # if we keep finding our own marbles
-            if current_spot == color and (r, c) not in sequence.keys():
-                sequence[(r, c)] = color
+            if current_spot == friend and (r, c) not in sequence.keys():
+                sequence[(r, c)] = friend
             # we either find an enemy or an empty spot
             elif current_spot in (enemy, free):
-                sequence[(r, c)] = enemy if sumito else color
+                sequence[(r, c)] = enemy if sumito else friend
                 # if its an actual free spot, we break the while loop
                 if current_spot == free:
-                    break
+                    end_move = True
             else:
                 if colors[-1] == enemy:
-                    user_messages("GG_KILLED_ENEMY")
+                    info_messages("GG_KILLED_ENEMY")
                     self.marbles[enemy] -= 1
                 else:
-                    user_messages("WARN_SUICIDE")
-                    self.marbles[color] -= 1
-                break
+                    info_messages("WARN_SUICIDE")
+                    self.marbles[friend] -= 1
+                end_move = True 
             
             # getting the next spot
-            next_row = f"{chr(ord(next[0]) + j)}"
-            next_col = f"{int(next[1]) + int(k)}"
-            next = f"{next_row + next_col}"
+            next = self.next_spot(first, next)
 
 
-    def move_marbles(self, couples, orientation, color, sequence):
+    def get_middle_marble(self, marbles_group, color):
         """
-        TODO        
-
+        TODO
         """
-        enemy = color - 1 if color == 3 else color + 1
+        marbles_group = sorted(marbles_group, key=lambda s: s[1])
+        first, last = marbles_group
+        range_3 = (ord(last[0]) - ord(first[0]) == 2 or
+                   int(last[1]) - int(first[1]) == 2)
 
-        for element in couples:
-            r, c = element
-            sequence[(r, c)] = 1 # all the initial spots become empty
-            # to store the different colors (enemy or player's current color)
-
-            n_r, n_c = self.get_next_spot(r, c, orientation)
-            next_spot = self.board[n_r][n_c]
-            if next_spot == color or next_spot == enemy:
-                user_messages("ERR_MOVE_MULTIPLE")
-                self.ask_move(color)
-                return
-            elif next_spot == 0:
-                user_messages("WARN_SUICIDE")
-                continue
+        if range_3: # case of a 3 marbles range
+            # getting the middle marble
+            min_r = min(marbles_group, key=lambda s: ord(s[0]))[0]
+            max_r = max(marbles_group, key=lambda s: ord(s[0]))[0]
+            if min_r == max_r: # case of horizontal range
+                mid_row = min_r 
             else:
-                sequence[(n_r, n_c)] = color
+                mid_row = chr((ord(min_r) + ord(max_r)) // 2) # case of diagonal rage
 
+            min_c = min(marbles_group, key=lambda s: int(s[1]))[1]
+            max_c = max(marbles_group, key=lambda s: int(s[1]))[1]
+            if min_c == max_c:
+                mid_col = min_c
+            # case of diagonal range
+            else:
+                mid_col = str((int(min_c) + int(max_c)) // 2)
+            return mid_row + mid_col
+        return False # if the marble are not connected, returns False
+            
 
-    def is_diagonal(self, couples_hexa):
+    def next_spot(self, first, next):
         """
         TODO
         """
-        min_r = min(couples_hexa, key=lambda t: t[0])[0].upper()
-        max_r = max(couples_hexa, key=lambda t: t[0])[0].upper()
-        return (
-            len(set(e[1] for e in couples_hexa)) == 1
-            and ord(max_r) - ord(min_r) < len(couples_hexa)
-        )
+        # predicting the next rows
+        if first[0] == next[0]: # lateral pushing
+            j = 0
+        else:
+            # diagonal pushing direction (up: 1, down: -1)
+            j = 1 if ord(first[0]) < ord(next[0]) else -1 
 
+        # predicting the next columns
+        if j == 0:
+            k = 1 if first[1] < next[1] else -1
+        else:
+            k = 0 if first[1] == next[1] else -j 
 
-    def is_horizontal(self, couples_hexa):
-        """
-        TODO
-        """
-        # test along a horizontal line
-        min_c = min(couples_hexa, key=lambda t: t[1])[1]
-        max_c = max(couples_hexa, key=lambda t: t[1])[1]
-        return (
-            len(set(e[0] for e in couples_hexa)) == 1 
-            and int(max_c) - int(min_c) < len(couples_hexa)
-        )
-                        
+        return f"{chr(ord(next[0]) + j)}{int(next[1]) + int(k)}"
+                    
 
     def __str__(self):
         """

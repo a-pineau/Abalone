@@ -1,65 +1,104 @@
 # ---------------------- #
-#     Error Messages     #
+#      User Messages     #
 # ---------------------- #
 from termcolor import colored
 
+def ask_messages(msg):
+    """
+    TODO
+    """
+    msg_color = "white"
+    ask_msgs = {
+        "ASK_MVT": colored(
+            "Do you want to push marbles or perform a free move?\n"
+            + "P: push, F: free: ",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "ASK_P_MARBLES": colored(
+            "Select a marble and its next position: ",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "ASK_F_MARBLES": colored(
+            "Select a single marble or a range of marble. \n" +
+            "In the case of a range, select the first and last marble.\n"
+            "Also pick the next position of the first selected marble: ",
+            msg_color,
+            attrs=["bold"]
+        )
+    }
+    return ask_msgs[msg]
 
-def user_messages(msg):
-    messages = {
+def err_messages(msg):
+    """
+    TODO
+    """
+    msg_color = "red"
+    err_msgs = {
         "ERR_MOVEMENT": colored(
             "Invalid movement!",
-            "red",
+            msg_color,
             attrs=["bold"]
         ),
         "ERR_INPUTS": colored(
             "Invalid inputs!", 
-            "red", 
+            msg_color, 
             attrs=["bold"]
         ),
         "ERR_MULTIPLE_MARBLES": colored(
-            "You gotta select 3 linked marbles along a common axis!",
-            "red",
+            "You gotta select 3 connected marbles along a common axis!",
+            msg_color,
             attrs=["bold"]
         ),
         "ERR_WRONG_MARBLES": colored(
             "You gotta chose your own marble(s)!",
-            "red",
+            msg_color,
             attrs=["bold"]
         ),
-        "ERR_ORIENTATION": colored(
-            "Invalid orientation!",
-            "red",
+        "ERR_CHOSEN_SPOT": colored(
+            "You gotta select an empty spot!",
+            msg_color,
             attrs=["bold"]
         ),
         "ERR_MOVE_MULTIPLE": colored(
             "You cannot move your multiple marbles like this!",
-            "red",
+            msg_color,
             attrs=["bold"]
         ),
         "ERR_TOO_MUCH": colored(
             "You cannot move more than 3 marbles!",
-            "red",
+            msg_color,
             attrs=["bold"]
         ),
         "ERR_SUMITO": colored(
             "Wrong sumito!",
-            "red",
-            attrs=["bold"]
-        ),
-        "WARN_SUICIDE": colored(
-            "You killed your own marble, GGs.",
-            "yellow",
-            attrs=["bold"]
-        ),
-        "GG_KILLED_ENEMY": colored(
-            "You've killed an enemy marble!",
-            "green",
+            msg_color,
             attrs=["bold"]
         )
     }
-    print(messages[msg])
+    print(err_msgs[msg])
+
+def info_messages(msg):
+    """
+    TODO
+    """
+    msg_color = "yellow"
+    info_msgs = {
+        "INFO_SUICIDE": colored(
+            "You\'ve killed your own marble, GGs.",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "INFO_KILLED_ENEMY": colored(
+            "You've killed an enemy marble!",
+            msg_color,
+            attrs=["bold"]
+        )
+    }
 
 
-    if __name__ == "__main__":
-        pass # test
+
+if __name__ == "__main__":
+    pass # test
 
