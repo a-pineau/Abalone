@@ -43,11 +43,11 @@ class Board():
                       [0, 0, 0, 3, 3, 3, 3, 3, 3],
                       [0, 0, 0, 0, 3, 3, 3, 3, 3]]
 
-    def count_marble(self):
+    def enemy(self, color):
         """
         TODO
         """
-        gen_board = [item for sub_list in self.board for item in sub_list]
+        return color + 1 if color == 2 else color - 1
 
 
     def ask_move(self, color):
@@ -57,8 +57,9 @@ class Board():
         Outputs:
             type tuple of int (player's move)
         """
-
-        while True:
+        enemy = self.enemy(color)
+        valid_move = False
+        while not valid_move:
             # type of movement (lateral or pushing)
             move_type = input(ask_messages("ASK_MVT")).upper()
 
@@ -83,18 +84,22 @@ class Board():
 
             # pairs value construction
             couples_hexa = tuple(sliced(positions, 2))
+
             # pairs construction in the 2d list frame
-            couples_square = (self.hexa_to_square(c) for c in couples_hexa)
+            couples_square = (self.hexa_to_square(c) 
+                              for c in couples_hexa)
             couples_square = tuple(couples_square)
 
             # check if all the selected marbles have the same color
             values = tuple(self.board[r][c] for r, c in couples_square)
-            if not all(e == color for e in values):
+            if enemy in values:
                 err_messages("ERR_WRONG_MARBLES")
                 continue
-            break
-            
-        return couples_hexa, move_type
+
+            valid_move = True
+        
+        # board update
+        self.update_board(couples_hexa, move_type, color, enemy)
 
 
     def hexa_to_square(self, coords_hexa):
@@ -119,7 +124,7 @@ class Board():
             )
 
 
-    def update_board(self, couples, move_type, color):
+    def update_board(self, couples, move_type, color, enemy):
         """
         TODO
         """
@@ -127,41 +132,72 @@ class Board():
         sequence = dict()
 
         if move_type == "P":
-            self.push_marbles(couples, color, sequence)
+            self.push_marbles(couples, sequence, color, enemy)
         else:
-            self.move_marbles(couples, color, sequence)
+            self.move_marbles(couples, sequence, color, enemy)
 
-        # Updating board
         for key, value in sequence.items():
             row, col = key
             self.board[row][col] = value
 
 
-    def move_marbles(self, couples, color, sequence):
+    def move_marbles(self, couples, sequence, color, enemy):
         """
         TODO        
         """
-        enemy = color - 1 if color == 3 else color + 1
         friend = color 
-        marbles_group, next = list(couples[:-1]), couples[-1] 
-        print(sequence)
+        marbles_range, next = list(couples[:-1]), couples[-1] 
+        first, last = marbles_range
+
+        # lengths (rows, columns) of the range
+        l_row = abs(ord(last[0]) - ord(first[0]))
+        l_col = abs(int(last[1]) - int(first[1]))
+
+        # the range cannot have more than 3 marbles
+        if any(l > 2 for l in (l_row, l_col)):
+            err_messages("ERR_RANGE")
+            self.ask_move(color)
+            return
+
+        range_3_marbles = any(l == 2 for l in (l_row, l_col))
 
         # range of 3 marbles, we need to find the middle one
         # as the user provides w/ the first and the last marble
-        if len(marbles_group) >= 2:
-            mid_marble = self.get_middle_marble(marbles_group, color)
-            if not mid_marble: # in that case, the inputs arent valid
-                err_messages("ERR_MULTIPLE_MARBLES")
+        if range_3_marbles:
+            mid_marble = self.middle_marble(marbles_range, 
+                                                    color)
+            marbles_range.insert(1, mid_marble)
+
+        # check if the range does not contain empty spots or enemies
+        couples_square = (self.hexa_to_square(e) for e in marbles_range)
+        if any(self.board[r][c] != friend for r, c in couples_square):
+            err_messages("ERR_NONFRIENDLY_RANGE")
+            self.ask_move(color)
+            return
+
+        j, k = self.predict_direction(marbles_range[0], 
+                                      marbles_range[1])
+        for couple in marbles_range:
+            valid_neighborhood = self.valid_neighborhood(couple, 
+                                                         color,
+                                                         enemy)
+            r, c = self.hexa_to_square(couple)
+            n_r, n_c = self.hexa_to_square(next)
+            if (n_r, n_c) not in valid_neighborhood:
+                err_messages("ERR_MOVE_RANGE")
                 self.ask_move(color)
                 return
-            marbles_group.insert(1, mid_marble)
-        # all the selected marbles will become empty spots
-        sequence = {key: 1 for key in marbles_group}
+            sequence[(r, c)] = 1
+            sequence[(n_r, n_c)] = color
 
-        print(marbles_group)
-        print(sequence)
+            # getting the next spot
+            next_row = chr(ord(next[0]) + j)
+            next_col = int(next[1]) + int(k)
+            next = f"{next_row}{next_col}"
 
-    def push_marbles(self, couples, color, sequence):
+
+
+    def push_marbles(self, couples, sequence, color, enemy):
         """
         TODO
         """
@@ -170,6 +206,7 @@ class Board():
         friend = color
         enemy = friend - 1 if friend == 3 else friend + 1 # current enemy
         first, next = couples # the first marble and its next spot
+        j, k = self.predict_direction(first, next)
 
         r, c = self.hexa_to_square(first) # coordinates in the square frame
 
@@ -224,39 +261,52 @@ class Board():
                 end_move = True 
             
             # getting the next spot
-            next = self.next_spot(first, next)
+            next_row = chr(ord(next[0]) + j)
+            next_col = int(next[1]) + int(k)
+            next = f"{next_row}{next_col}"
 
 
-    def get_middle_marble(self, marbles_group, color):
+    def middle_marble(self, marbles_group, color):
         """
         TODO
         """
         marbles_group = sorted(marbles_group, key=lambda s: s[1])
-        first, last = marbles_group
-        range_3 = (ord(last[0]) - ord(first[0]) == 2 or
-                   int(last[1]) - int(first[1]) == 2)
 
-        if range_3: # case of a 3 marbles range
-            # getting the middle marble
-            min_r = min(marbles_group, key=lambda s: ord(s[0]))[0]
-            max_r = max(marbles_group, key=lambda s: ord(s[0]))[0]
-            if min_r == max_r: # case of horizontal range
-                mid_row = min_r 
-            else:
-                mid_row = chr((ord(min_r) + ord(max_r)) // 2) # case of diagonal rage
+        # getting the middle marble
+        min_r = min(marbles_group, key=lambda s: ord(s[0]))[0]
+        max_r = max(marbles_group, key=lambda s: ord(s[0]))[0]
+        if min_r == max_r: 
+            mid_row = min_r # case of horizontal range  
+        else:
+            mid_row = chr((ord(min_r) + ord(max_r)) // 2) # case of diagonal range
 
-            min_c = min(marbles_group, key=lambda s: int(s[1]))[1]
-            max_c = max(marbles_group, key=lambda s: int(s[1]))[1]
-            if min_c == max_c:
-                mid_col = min_c
-            # case of diagonal range
-            else:
-                mid_col = str((int(min_c) + int(max_c)) // 2)
-            return mid_row + mid_col
-        return False # if the marble are not connected, returns False
+        min_c = min(marbles_group, key=lambda s: int(s[1]))[1]
+        max_c = max(marbles_group, key=lambda s: int(s[1]))[1]
+        if min_c == max_c:
+            mid_col = min_c
+        else:
+            mid_col = str((int(min_c) + int(max_c)) // 2)
+        return mid_row + mid_col
+
+    def valid_neighborhood(self, first, color, enemy):
+        """
+        TODO
+        """
+        valid_neighborhood = []
+        disp = [lambda r, c: (r - 1, c),
+                lambda r, c: (r - 1, c - 1),
+                lambda r, c: (r + 1, c + 1),
+                lambda r, c: (r + 1, c)]
+        
+        r, c = self.hexa_to_square(first)
+        for fun in disp:
+            n_r, n_c = fun(r, c)
+            if self.board[n_r][n_c] not in (color, enemy):
+                valid_neighborhood.append((n_r, n_c))
+        return valid_neighborhood
+        
             
-
-    def next_spot(self, first, next):
+    def predict_direction(self, first, next):
         """
         TODO
         """
@@ -273,7 +323,7 @@ class Board():
         else:
             k = 0 if first[1] == next[1] else -j 
 
-        return f"{chr(ord(next[0]) + j)}{int(next[1]) + int(k)}"
+        return j, k
                     
 
     def __str__(self):
@@ -343,18 +393,9 @@ class Board():
 def main():
     B = Board()
     print(B)
-    couples, orientation = B.ask_move(3)
-    B.update_board(couples, orientation, 3)
-    print(B)
-
-    couples, orientation = B.ask_move(3)
-    B.update_board(couples, orientation, 3)
+    B.ask_move(3)
     print(B)
     
-
-    couples, orientation = B.ask_move(3)
-    B.update_board(couples, orientation, 3)
-    print(B)
 
 if __name__ == "__main__": 
     main()

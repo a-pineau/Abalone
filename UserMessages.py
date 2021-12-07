@@ -46,22 +46,27 @@ def err_messages(msg):
             msg_color, 
             attrs=["bold"]
         ),
-        "ERR_MULTIPLE_MARBLES": colored(
-            "You gotta select 3 connected marbles along a common axis!",
+        "ERR_RANGE": colored(
+            "The selected range is not valid!",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "ERR_NONFRIENDLY_RANGE": colored(
+            "The selected range should contain only friendly marbles!",
             msg_color,
             attrs=["bold"]
         ),
         "ERR_WRONG_MARBLES": colored(
-            "You gotta chose your own marble(s)!",
+            "You cannot select an enemy spot!",
             msg_color,
             attrs=["bold"]
         ),
-        "ERR_CHOSEN_SPOT": colored(
+        "ERR_NONEMPTY_SPOT": colored(
             "You gotta select an empty spot!",
             msg_color,
             attrs=["bold"]
         ),
-        "ERR_MOVE_MULTIPLE": colored(
+        "ERR_MOVE_RANGE": colored(
             "You cannot move your multiple marbles like this!",
             msg_color,
             attrs=["bold"]
