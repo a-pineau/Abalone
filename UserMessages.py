@@ -51,7 +51,7 @@ def err_messages(msg):
             msg_color,
             attrs=["bold"]
         ),
-        "ERR_NONFRIENDLY_RANGE": colored(
+        "ERR_NON_FRIENDLY_RANGE": colored(
             "The selected range should contain only friendly marbles!",
             msg_color,
             attrs=["bold"]
@@ -61,7 +61,7 @@ def err_messages(msg):
             msg_color,
             attrs=["bold"]
         ),
-        "ERR_NONEMPTY_SPOT": colored(
+        "ERR_NON_EMPTY_SPOT": colored(
             "You gotta select an empty spot!",
             msg_color,
             attrs=["bold"]
