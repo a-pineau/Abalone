@@ -24,7 +24,8 @@ class Board():
     }
 
     def __init__(self):
-        """
+        """Constructor.
+
         TODO
         """
         self.dimension = 9
@@ -44,18 +45,39 @@ class Board():
                       [0, 0, 0, 0, 3, 3, 3, 3, 3]]
 
     def enemy(self, color):
-        """
-        TODO
-        """
-        return color + 1 if color == 2 else color - 1
+        """Compute the current enemy of the current color.
 
+        Parameter
+        ---------
+        color: int (positional)
+            Current player's color
+
+        Return
+        ------
+        enemy: int
+            Current player's enemy
+
+        """
+        enemy: int = color + 1 if color == 2 else color - 1
+        return enemy
 
     def ask_move(self, color):
-        """ Ask the player his current move
-        Inputs:
-            color
-        Outputs:
-            type tuple of int (player's move)
+        """Ask the current player his move.
+
+        The player is asked until his input is valid.
+        It first checks if the type of movement is correct (push or free).
+        Then it checks if the positions entered can be updated.
+        For instance, an empty or an enemy spot cannot be directly moved.
+        Once the input is valid, the method update_board is called.
+
+        Parameter
+        ---------
+        color: int (positional)
+            Player's current color
+
+        Returns
+        -------
+        None
         """
         enemy = self.enemy(color)
         valid_move = False
@@ -101,30 +123,53 @@ class Board():
         self.update_board(data_user, move_type, color, enemy)
 
     def hexa_to_square(self, coords_hexa):
+        """Converts coordinates of a given marble.
+
+        Translates the coordinates of a given spot on the hexagonal
+        board (i.e: "G3") into a valid row-column couple used by
+        the 2d-list (self.board)
+
+        Parameters
+        ----------
+        coords_hexa: string (positional)
+            Coordinates of a given spot on the hexagonal board
+
+        Returns
+        -------
+        n_r, n_c: tuple (int)
+            Coordinates of the given spot in the 2d-list (self.board)
         """
-        Converts the BOARD coordinates (hexagonal) to DEBUG (square) coordinates
-        Inputs:
-            letter (string): first_m coordinate
-            number (int): second coordinate
-        Ouputs:
-            x, y (tuple): DEBUG coordinates
-        """
-        x, y = coords_hexa.upper()
-        if y in (self.middle, self.middle + 1):
-            return (
-                self.char_2_num[x], 
-                int(y)
-            )
+        r, c = coords_hexa.upper()
+        n_r = self.char_2_num[r]
+        if c in (self.middle, self.middle + 1):
+                n_c = int(c)
         else:
-            return (
-                self.char_2_num[x], 
-                int(y) + (ord(x) - ord("A")) - (self.middle + 1)
-            )
+                n_c =int(c) + (ord(r) - ord("A")) - (self.middle + 1)
+        return n_r, n_c
 
 
     def update_board(self, data_user, move_type, color, enemy):
-        """
-        TODO
+        """Update the board with new values.
+
+        This method is called after submitting a correct move.
+        It initializes an empty dict and passes it to methods which
+        will fill it. The method call depends on the player's move.
+        
+        Parameters
+        ----------
+        data_user: tuple of strings (required)
+            Inputs given by the user and describe its move
+        move_type: string (required)
+            Current player's move ("P": pushing marbles, "F":
+            free move)
+        color: int (required):
+            Current player's color
+        enemy: int (required)
+            Current's player enemy
+
+        Returns
+        -------
+        None
         """
         enemy = color - 1 if color == 3 else color + 1
         sequence = dict()
@@ -197,11 +242,27 @@ class Board():
                 next_m_col = int(next_m[1]) + int(k)
                 next_m = f"{next_m_row}{next_m_col}"
 
-
-
     def push_marbles(self, data_user, sequence, color, enemy):
-        """
-        TODO
+        """Compute the new positions of marbles.
+
+        This method is called whenever a player wants to move
+        marbles by pushing them. It also checks if a sumito is 
+        being performed and if a marble is being ejected.
+        
+        Parameters
+        ----------
+        data_user: tuple of strings (required)
+            Inputs given by the user and describe its move
+        sequence: dict (required)
+            New positions of marbles
+        color: int (required):
+            Current player's color
+        enemy: int (required)
+            Current's player enemy
+
+        Returns
+        -------
+        None
         """
 
         free = 1
@@ -267,31 +328,62 @@ class Board():
             next_m = f"{next_m_row}{next_m_col}"
 
 
-    def middle_marble(self, marbles_group, color):
+    def middle_marble(self, marbles_range, color):
+        """Compute the middle spot of a given range of marbles
+
+        For instance, the middle spot of the following range: "G3G5"
+        will be "G4". It deals with both horizontal and diagonal ranges.
+        This method is called whenever the player wants to freely move
+        3 marbles.
+
+        Parameter
+        ---------
+        marbles_ranges: list of strings (positional)
+            Range of marbles
+        
+        Returns
+        -------
+        None
         """
-        TODO
-        """
-        marbles_group = sorted(marbles_group, key=lambda s: s[1])
+        marbles_range = sorted(marbles_range, key=lambda s: s[1])
 
         # getting the middle marble
-        min_r = min(marbles_group, key=lambda s: ord(s[0]))[0]
-        max_r = max(marbles_group, key=lambda s: ord(s[0]))[0]
+        min_r = min(marbles_range, key=lambda s: ord(s[0]))[0]
+        max_r = max(marbles_range, key=lambda s: ord(s[0]))[0]
         if min_r == max_r: 
             mid_row = min_r # case of horizontal range  
         else:
             mid_row = chr((ord(min_r) + ord(max_r)) // 2) # case of diagonal range
 
-        min_c = min(marbles_group, key=lambda s: int(s[1]))[1]
-        max_c = max(marbles_group, key=lambda s: int(s[1]))[1]
+        min_c = min(marbles_range, key=lambda s: int(s[1]))[1]
+        max_c = max(marbles_range, key=lambda s: int(s[1]))[1]
         if min_c == max_c:
             mid_col = min_c
         else:
             mid_col = str((int(min_c) + int(max_c)) // 2)
         return mid_row + mid_col
 
-    def valid_neighborhood(self, first_m, color, enemy):
-        """
-        TODO
+    def valid_neighborhood(self, marble, color, enemy):
+        """Compute where a given marble can move.
+
+        Method called whenever the player wants to freely move marbles.
+        It thus is called only if move_marbles is called
+        A given marble can be moved into an empty spot or the dead
+        zone (which corresponds to killing a own marble).
+        
+        Parameter
+        ---------
+        marble: string (positional)
+            The marble the player wants to move
+        color: int (positional)
+            Player's current move
+        enemy: int (positional)
+            Player's current enemy
+
+        Returns
+        -------
+        valid_neighborhood: list
+            All the valid locations where the marble can be moved
         """
         valid_neighborhood = []
         disp = [lambda x, y: (x - 1, y),
@@ -299,7 +391,7 @@ class Board():
                 lambda x, y: (x + 1, y + 1),
                 lambda x, y: (x + 1, y)]
         
-        r, c = self.hexa_to_square(first_m)
+        r, c = self.hexa_to_square(marble)
         for fun in disp:
             n_r, n_c = fun(r, c)
             if self.board[n_r][n_c] not in (color, enemy):
@@ -327,15 +419,20 @@ class Board():
                     
 
     def __str__(self):
-        """
-        Display the current board's state
+        """Returns the current boards states.
+
         Two boards are displayed:
         Debug that corresponds to the 2D-list w/ the associated indexes
         Board shows the actual play board 
-        Paremeters: 
-            None
-        Returns: 
-            None
+
+        Paremeters
+        ----------
+        None
+
+        Returns 
+        -------
+        current_board: str
+            Boards states
         """
         r, g, c, y = self.r, self.g, self.c, self.y
 
@@ -391,6 +488,7 @@ class Board():
 
 def main():
     B = Board()
+
     print(B)
     B.ask_move(3)
     print(B)
