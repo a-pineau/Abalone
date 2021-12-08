@@ -149,6 +149,9 @@ class Board():
 
         if not unique_marble:
             first_m, last = marbles_range
+            # this will be used later on to predict the next positions
+            j, k = self.predict_direction(marbles_range[0], 
+                                          marbles_range[1])
 
             # lengths (rows, columns) of the range
             l_row = abs(ord(last[0]) - ord(first_m[0]))
@@ -174,10 +177,7 @@ class Board():
             err_messages("ERR_NON_FRIENDLY_RANGE")
             self.ask_move(color)
             return
-
-        if not unique_marble:
-            j, k = self.predict_direction(marbles_range[0], 
-                                          marbles_range[1])
+            
         for element in marbles_range:
             valid_neighborhood = self.valid_neighborhood(element, 
                                                          color,
@@ -209,8 +209,7 @@ class Board():
         enemy = friend - 1 if friend == 3 else friend + 1 # current enemy
         first_m, next_m = data_user # the first_m marble and its next_m spot
         j, k = self.predict_direction(first_m, next_m)
-
-        r, c = self.hexa_to_square(first_m) # coordinates in the square frame
+        r, c = self.hexa_to_square(first_m) # coordinates in 2d-array
 
         sequence[(r, c)] = 1 # the first_m marble becomes an empty spot
         colors = [friend] # storing the colors we meet
