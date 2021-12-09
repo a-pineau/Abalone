@@ -9,7 +9,7 @@ def ask_messages(msg):
     """
     msg_color = "white"
     ask_msgs = {
-        "ASK_MVT": colored(
+        "ASK_MOVEMENT": colored(
             "Do you want to push marbles or perform a free move?\n"
             + "P: push, F: free: ",
             msg_color,
