@@ -42,8 +42,13 @@ def err_messages(msg):
             attrs=["bold"]
         ),
         "ERR_INPUTS": colored(
-            "Invalid inputs!", 
-            msg_color, 
+            "Invalid inputs!",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "ERR_ORIENTATION": colored(
+            "Invalid orientation!",
+            msg_color,
             attrs=["bold"]
         ),
         "ERR_RANGE": colored(
@@ -57,7 +62,7 @@ def err_messages(msg):
             attrs=["bold"]
         ),
         "ERR_WRONG_MARBLES": colored(
-            "You cannot select an enemy spot!",
+            "You have to select your own marble(s)!",
             msg_color,
             attrs=["bold"]
         ),
@@ -77,7 +82,7 @@ def err_messages(msg):
             attrs=["bold"]
         ),
         "ERR_SUMITO": colored(
-            "Wrong sumito!",
+            "/!\ Wrong sumito! /!\\",
             msg_color,
             attrs=["bold"]
         )
@@ -95,12 +100,13 @@ def info_messages(msg):
             msg_color,
             attrs=["bold"]
         ),
-        "INFO_KILLED_ENEMY": colored(
+        "INFO_KILL_ENEMY": colored(
             "You've killed an enemy marble!",
             msg_color,
             attrs=["bold"]
         )
     }
+    print(info_msgs[msg])
 
 
 

@@ -85,7 +85,6 @@ class Board():
                 expr = r"^([A-Z][1-9]\s?){1,2}\s?([A-Z][1-9]){1}$"
                 msg = ask_messages("ASK_F_MARBLES")
                        
-
             data_user = input(colored(msg, attrs=["bold"]))
             data_user = data_user.replace(" ", "")
 
@@ -102,7 +101,7 @@ class Board():
             if enemy in values:
                 err_messages("ERR_WRONG_MARBLES")
                 continue
-
+            
             valid_move = True
         
         # board update
@@ -143,6 +142,7 @@ class Board():
         n_r, n_c: tuple (int)
             Coordinates of the given spot in the 2d-list (self.board)
         """
+        print("coords_hexa=", coords_hexa)
         r, c = coords_hexa.upper()
         n_r = self.char_2_num[r]
         if c in (self.middle, self.middle + 1):
