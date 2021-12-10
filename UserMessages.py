@@ -66,7 +66,7 @@ def err_messages(msg):
             msg_color,
             attrs=["bold"]
         ),
-        "ERR_NON_EMPTY_SPOT": colored(
+        "ERR_EMPTY_SPOT": colored(
             "You gotta select an empty spot!",
             msg_color,
             attrs=["bold"]

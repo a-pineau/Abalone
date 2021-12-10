@@ -203,7 +203,7 @@ class Board():
                 if next_spot in (enemy, empty):
                     new_data[(n_r, n_c)] = enemy if sumito else enemy
                 elif next_spot == friend:
-                    wrong_sumito = friend
+                    wrong_sumito = True
                 else:
                     # enemy pushed to deadzone
                     info_messages("INFO_KILL_ENEMY")
