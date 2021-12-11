@@ -81,7 +81,7 @@ class Board():
                       [1, 1, 2, 2, 2, 1, 1, 0, 0],
                       [1, 1, 1, 1, 1, 1, 1, 1, 0],
                       [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                      [0, 1, 1, 3, 1, 1, 1, 1, 1],
+                      [0, 1, 1, 1, 1, 1, 1, 1, 1],
                       [0, 0, 1, 1, 3, 3, 3, 1, 1],
                       [0, 0, 0, 3, 3, 3, 3, 3, 3],
                       [0, 0, 0, 0, 3, 3, 3, 3, 3]]
@@ -193,7 +193,7 @@ class Board():
                                           orientation,
                                           new_data)
 
-        # Updating board
+        # Updating board if possible
         if valid_update:
             for key, value in new_data.items():
                 row, col = key
@@ -231,6 +231,7 @@ class Board():
                 else:
                     # friend pushed to deadzone
                     info_messages("INFO_SUICIDE")
+                    Board.marbles[friend] -= 1
                     break
             # next spot depends on the sumito
             elif current_spot == enemy:
@@ -241,6 +242,7 @@ class Board():
                 else:
                     # enemy pushed to deadzone
                     info_messages("INFO_KILL_ENEMY")
+                    Board.marbles[enemy] -= 1
                     break
 
             # performing a wrong sumito
@@ -249,7 +251,6 @@ class Board():
                 return False
 
             r, c = n_r, n_c
-
         return True
 
     def free_move(self, friend, user_data, orientation, new_data) -> bool:
@@ -260,19 +261,22 @@ class Board():
         print(user_data)
         enemy = self.enemy(friend)
         for element in user_data:
-            print("element=", element)
             valid_neighbors = self.valid_neighborhood(element, 
                                                       friend,
                                                       enemy)
-            print("neigh=", valid_neighbors)
             r, c = self.to_2d_list(element)
-            n_r, n_c = self.next_spot(r, c, orientation)
-            if (n_r, n_c) not in valid_neighbors:
-                err_messages("ERR_EMPTY_SPOT")
-                return False
-            new_data[(r, c)] = 1
-            new_data[(n_r, n_c)] = friend
-
+            try:
+                n_r, n_c = self.next_spot(r, c, orientation)
+                if (n_r, n_c) not in valid_neighbors:
+                    err_messages("ERR_EMPTY_SPOT")
+                    return False
+                new_data[(r, c)] = 1
+                new_data[(n_r, n_c)] = friend
+            except IndexError:
+                info_messages("INFO_SUICIDE")
+                new_data[(r, c)] = 1
+                Board.marbles[friend] -= 1
+                
         return True
 
     def valid_neighborhood(self, marbles, friend, enemy) -> list:
@@ -478,14 +482,14 @@ class Board():
         """        
         min_r = min(user_data, key=lambda t: t[0])[0].upper()
         max_r = max(user_data, key=lambda t: t[0])[0].upper()
-        is_diagonal = (
+        is_diagonal: bool = (
             len(set(e[1] for e in user_data)) == 1
             and ord(max_r) - ord(min_r) < len(user_data)
         )
         return is_diagonal
 
     @staticmethod
-    def is_horizontal(self, user_data) -> bool:
+    def is_horizontal(user_data) -> bool:
         """Check if a range of marbles is aligned along a horizontal axis.
             
         Parameters
@@ -500,7 +504,7 @@ class Board():
         """
         min_c = min(user_data, key=lambda t: t[1])[1]
         max_c = max(user_data, key=lambda t: t[1])[1]
-        is_horizontal = (
+        is_horizontal: bool = (
             len(set(e[0] for e in user_data)) == 1
             and int(max_c) - int(min_c) < len(user_data)
         )
@@ -512,12 +516,12 @@ def main():
     B = Board()
     color = random.choice((2, 3))
     game_over = False
-    print(B)
-    # while not game_over:
-    #     user_data, orientation = B.ask_move(3)
-    #     valid_move = B.update_board(user_data, orientation, 3)
-    #     if not valid_move:
-    #         continue
+    while not game_over:
+        user_data, orientation = B.ask_move(color)
+        valid_move = B.update_board(user_data, orientation, 3)
+        if not valid_move:
+            continue
+        color = B.enemy(color)
 
 
 if __name__ == "__main__":
