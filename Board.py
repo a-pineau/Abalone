@@ -1,7 +1,3 @@
-
-# -------------------- #
-#    Abalone Board     #
-# -------------------- #
 import math
 import re
 import itertools
@@ -16,7 +12,7 @@ class Board():
     """
     A class used to represent a standard Abalone board.
 
-    Static attributes
+    Static variables
     ----------
     dimension: int
         Number of rows, columns of the board
@@ -32,6 +28,11 @@ class Board():
         its associated value is a lambda function using 2 parameters.
         The dictionnary is used to compute new coordinates of a 
         given sport of the board
+    r, g, c, y, w: string
+        Define the color red, green, cyan, yellow and white, respectively
+    to_color: function
+        Lambda function to turn a string into a colored one 
+        (s: string, c: color)
     
     Attributes
     ----------
@@ -52,13 +53,45 @@ class Board():
 
     Methods
     -------
-    says(sound=None)
-        Prints the animals name and what sound it makes
-    """
+    ask_move(color) -> tuple
+        Ask the current player his move
+    update_board(user_data, orientation, color) -> bool
+        Update the current board if the move is possible
+    check_win() -> bool
+        Count the number of marbles still alive
+    push_move(friend, user_data, orientation, new_data) -> bool
+        Compute the new positions of moving marbles by pushing
+        Returns True if the move is valid
+    free_move(friend, user_data, orientation, new_data) -> bool
+        Move a group of marbles in empty spots
+        Returns True if the move is valid
+    valid_neighborhood(marble, friend, enemy) -> list
+        Computes all valid neighboors where a given marble can move
+    debug_board() -> list
+        Return a representation of the attribute self.board as a list
+    real_board() -> list
+        Return the current Abalone board as a nested list
+    __str__() -> string
+        Return a full representation of the object as a string
 
-    dimension = 9
+    Static Methods
+    --------------
+    next_spot(r, c, orientation) -> tuple 
+        Compute the next spot of a given one.
+    to_2d_list(user_data) -> tuple
+        Converts coordinates of a given marble from the board to the nested list
+    enemy(color) -> int
+        Compute the enemy of the current color
+    is_diagonal(user_data) -> bool
+        Check if a range of marbles is aligned along a diagonal
+    is_horizontal(user_data) -> bool
+        Check if a range of marbles is aligned along a horizontal axis.
+    
+    """
+    dead, free = 0, 1
+    dimension = 11
     mid_point = math.floor(dimension / 2)
-    char_2_num = {chr(ord("A") + i): i for i in range(9)}
+    char_2_num = {chr(ord("A") + i): i + 1 for i in range(9)}
     disp = {
         "E" : lambda r, c: (r, c + 1),
         "W" : lambda r, c: (r, c - 1),
@@ -67,24 +100,45 @@ class Board():
         "NW": lambda r, c: (r - 1, c - 1),
         "SE": lambda r, c: (r + 1, c + 1),
     }
+    r, g, c, y, w = "red", "green", "cyan", "yellow", "white"
+    to_color = lambda s, c: colored(s, c, attrs=["bold"])
+
+    # 0: f = forbidden spot
+    # 1: e = empty spot
+    # 2: w = white marble
+    # 3: b = black marble
+    num_2_char = {
+        "0": " ",
+        "1": to_color("o", w),
+        "2": to_color("#", r),
+        "3": to_color("x", g) 
+    }
 
     def __init__(self):
-        """
-        TODO
+        """Constructor. Initializes the board and a marbles counter.
+
+        We assume the standard abalone initial configuration commonly 
+        used, so the marbles initial position are hard-coded.
+
+        Parameters
+        ----------
+        None
         """
         self.marbles = {2: 14, 3: 14}
 
         # We assume the standard initial configuration commonly used
         # So its hard-coded
-        self.board = [[2, 2, 2, 2, 2, 0, 0, 0, 0],
-                      [2, 2, 2, 2, 2, 2, 0, 0, 0],
-                      [1, 1, 2, 2, 2, 1, 1, 0, 0],
-                      [1, 1, 1, 1, 1, 1, 1, 1, 0],
-                      [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                      [0, 1, 1, 1, 1, 1, 1, 1, 1],
-                      [0, 0, 1, 1, 3, 3, 3, 1, 1],
-                      [0, 0, 0, 3, 3, 3, 3, 3, 3],
-                      [0, 0, 0, 0, 3, 3, 3, 3, 3]]
+        self.board = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                      [0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0],
+                      [0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0],
+                      [0, 1, 1, 2, 2, 2, 1, 1, 0, 0, 0],
+                      [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+                      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                      [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                      [0, 0, 0, 1, 1, 3, 3, 3, 1, 1, 0],
+                      [0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0],
+                      [0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 0],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
     def ask_move(self, color) -> tuple:
         """Ask the current player his move.
@@ -100,7 +154,7 @@ class Board():
         color: int (positional)
             Player's current color
 
-        Returns
+        Return
         -------
         data_user: tuple 
             The marble(s) the player wants to move
@@ -108,15 +162,14 @@ class Board():
             The orientation where the marble(s) are being moved
         """
         color_word = "Red" if color == 2 else "Green"
-        print(colored(f"{color_word}, it's your turn!",
-                      f"{color_word.lower()}",
-                      attrs=["bold"]))
+        print(Board.to_color(f"{color_word}, it's your turn!",
+                             f"{color_word.lower()}"))
         print(self)
 
         valid_move = False
         while not valid_move:
             expr = r"^([A-Z][1-9]\s?){1,3}$"
-            move = input("Pick your marble(s) (row-col: A-I, 0-8): ")
+            move = input(ask_messages("ASK_MARBLES"))
             if re.match(expr, move, re.IGNORECASE) is None:
                 err_messages("ERR_INPUTS")
                 continue
@@ -172,7 +225,7 @@ class Board():
         enemy: int (required)
             Current's player enemy
 
-        Returns
+        Return
         -------
         valid_update: bool
             It is possible that the player's move is incorrect.
@@ -200,17 +253,63 @@ class Board():
                 self.board[row][col] = value
         return valid_update
 
+    def check_win(self) -> bool:
+        """Count the number of marbles still alive. 
+
+        This method is used to check any (red or green) winning condition.
+        
+        Parameter
+        ---------
+        None
+
+        Return
+        ------
+        game_over: bool
+            True if any color won the game, False otherwise
+        """
+        game_over = False
+        red_wins = self.marbles[3] == 14 - 6
+        green_wins = self.marbles[2] == 14 - 6
+        if red_wins or green_wins:
+            if red_wins:
+                info_messages("INFO_RED_WINS")
+            else:
+                info_messages("INFO_GREEN_WNS")
+            game_over = True
+        
+        return game_over
+                
     def push_move(self, friend, user_data, orientation, new_data):
+        """Try to push marbles in a given direction.
+
+        This method is used whenever the player wants to push multiple
+        marbles. It also deals with sumito cases. If the move is incorrect,
+        i.e. the player is try to push more than 3 of is own marbles, or if
+        a sumito is invalid, it returns False. If the move is valid, it 
+        returns True and fill a dictionnary (new_data) with the corresponding
+        new positions.
+
+        Parameters
+        ----------
+        user_data: tuple
+            The first marble on which the push is being performed
+        orientation: string
+            The orientation in which the push is being performed
+        new_data: dict
+            dict of key:value pairs tuple:int where the tuples
+            represent the new positions or marbles and their new value
+
+        Return
+        ------
+        bool
+            True if the move is valid, False otherwise
         """
-        TODO
-        """
-        empty = 1
         enemy = self.enemy(friend)
         r, c = self.to_2d_list(user_data[0])
         new_data[(r, c)] = 1  # the first marble becomes empty
         colors = [self.board[r][c]]
 
-        while self.board[r][c] != empty:
+        while self.board[r][c] != Board.free:
             n_r, n_c = self.next_spot(r, c, orientation)
             current_spot = self.board[r][c]
             next_spot = self.board[n_r][n_c]
@@ -226,23 +325,23 @@ class Board():
                 return False
             # next spot is always friendly, except deadzone
             if current_spot == friend:
-                if next_spot in (friend, enemy, empty):
+                if next_spot in (friend, enemy, Board.free):
                     new_data[(n_r, n_c)] = friend
                 else:
                     # friend pushed to deadzone
                     info_messages("INFO_SUICIDE")
-                    Board.marbles[friend] -= 1
+                    self.marbles[friend] -= 1
                     break
             # next spot depends on the sumito
             elif current_spot == enemy:
-                if next_spot in (enemy, empty):
+                if next_spot in (enemy, Board.free):
                     new_data[(n_r, n_c)] = enemy if sumito else enemy
                 elif next_spot == friend:
                     wrong_sumito = True
                 else:
                     # enemy pushed to deadzone
                     info_messages("INFO_KILL_ENEMY")
-                    Board.marbles[enemy] -= 1
+                    self.marbles[enemy] -= 1
                     break
 
             # performing a wrong sumito
@@ -254,32 +353,50 @@ class Board():
         return True
 
     def free_move(self, friend, user_data, orientation, new_data) -> bool:
-        """
-        TODO
+        """Try to freely move marbles in a given direction.
 
+        This method is used whenever the player wants to freely multiple
+        marbles. It thus does not deal with sumito cases. If the move is incorrect,
+        i.e. the player is try to move more than 3 of is own marbles, or if
+        one of the next spot is invalid, it returns False. If the move is valid, it 
+        returns True and fill a dictionnary (new_data) with the corresponding
+        new positions.
+
+        Parameters
+        ----------
+        user_data: tuple
+            The first marble on which the push is being performed
+        orientation: string
+            The orientation in which the push is being performed
+        new_data: dict
+            dict of key:value pairs tuple:int where the tuples
+            represent the new positions or marbles and their new value
+
+        Return
+        ------
+        bool
+            True if the move is valid, False otherwise
         """
-        print(user_data)
         enemy = self.enemy(friend)
         for element in user_data:
             valid_neighbors = self.valid_neighborhood(element, 
                                                       friend,
                                                       enemy)
             r, c = self.to_2d_list(element)
-            try:
-                n_r, n_c = self.next_spot(r, c, orientation)
-                if (n_r, n_c) not in valid_neighbors:
-                    err_messages("ERR_EMPTY_SPOT")
-                    return False
-                new_data[(r, c)] = 1
+            n_r, n_c = self.next_spot(r, c, orientation)
+            if (n_r, n_c) not in valid_neighbors:
+                err_messages("ERR_EMPTY_SPOT")
+                return False
+            new_data[(r, c)] = 1
+            if self.board[n_r][n_c] == 1:
                 new_data[(n_r, n_c)] = friend
-            except IndexError:
+            else:
                 info_messages("INFO_SUICIDE")
-                new_data[(r, c)] = 1
-                Board.marbles[friend] -= 1
-                
+                self.marbles[friend] -= 1
+
         return True
 
-    def valid_neighborhood(self, marbles, friend, enemy) -> list:
+    def valid_neighborhood(self, marble, friend, enemy) -> list:
         """Compute where a given marble can move.
 
         Method called whenever the player wants to freely move marbles.
@@ -296,107 +413,149 @@ class Board():
         enemy: int (positional)
             Player's current enemy
 
-        Returns
+        Return
         -------
         valid_neighborhood: list
             All the valid locations where the marble can be moved
         """
         valid_neighborhood = []
-        r, c = self.to_2d_list(marbles)
+        r, c = self.to_2d_list(marble)
         for fun in Board.disp.values():
             n_r, n_c = fun(r, c)
             if self.board[n_r][n_c] not in (friend, enemy):
                 valid_neighborhood.append((n_r, n_c))
+                
         return valid_neighborhood
 
-    def current_board_state(self):
-        """Returns a view of the current board state.
+    def debug_board(self) -> list:
+        """Return a representation of the attribute self.board as a list
 
-        Paremeters
+        Parameters
         ----------
         None
 
-        Returns
-        -------
-        current_board: str
-            Boards states
+        Return
+        ------
+        debug_board: list
+            Representation of self.board
         """
-        r, g, c, y = "red", "green", "cyan", "yellow"
+        debug_board_list = []
+        for i in range(1, Board.dimension - 1):
+            num = colored(str(i), Board.c)
+            debug_board_str = num
+            debug_board_str += " ".join(list(Board.num_2_char[str(e)]
+                                             for e in self.board[i]))
+            debug_board_list.append(debug_board_str)
 
-        j = 1
-        k = Board.mid_point
-        l = Board.dimension
-        sp = " "
+        nums = list(str(i) for i in range(1, Board.dimension - 1))
+        nums = " ".join(nums)
+        debug_board_list.append(f"   {colored(nums, Board.c)}  ")
+        
+        return debug_board_list
+        
+    def real_board(self) -> list:
+        """Return the current Abalone board as a nested list.
+        
+        Parameters
+        ----------
+        None
 
-        # 0: f = forbidden spot
-        # 1: e = empty spot
-        # 2: w = white marble
-        # 3: b = black marble
-        num_char = {
-            "0": "f",
-            "1": colored("o", attrs=["bold"]),
-            "2": colored("#", r, attrs=["bold"]),
-            "3": colored("x", g, attrs=["bold"])
-        }
-
-        current_board = []
-        for i in range(Board.dimension):
-            l_row = list(
-                num_char[str(e)] if e != 0 else " "
-                for e in self.board[i]
-            )
-            letter = colored(str(chr(65 + i)), c)  # chr(65) = "A"
-
-            if i < Board.mid_point:
-                str_to_add = f"{k * sp}{letter} {sp.join(l_row).rstrip()}"
-                current_board.append(str_to_add)
+        Return
+        -------
+        real_board_list: list
+            Represents the actual hexagonal Abalone board 
+        """
+        real_board_list = []
+        k = Board.dimension - 2
+        for i in range(1, Board.dimension - 1):
+            letter = colored(chr(ord("A") + i - 1), Board.c)
+            real_board_str = f"{letter} "
+            real_board_str += " ".join(list(Board.num_2_char[str(e)]
+                                            for e in self.board[i]
+                                            if e != 0))
+            if i > math.floor(Board.dimension // 2):
+                real_board_str += f" {colored(k, Board.y)}"
                 k -= 1
-            elif i > Board.mid_point:
-                str_to_add = f"{j * sp}{letter} {sp.join(l_row).lstrip()} "
-                str_to_add += f"{colored(l, y)}"
-                current_board.append(str_to_add)
-                j += 1
-                l -= 1
-            else:
-                current_board.append(f"{letter} {sp.join(l_row)}")
-        return current_board
+            real_board_list.append(real_board_str)
 
-    def __str__(self):
-        """Returns a full representation of the object as a string.
+        nums = list(str(i) for i in range(1, (Board.dimension // 2) + 1))
+        nums = " ".join(nums)
+        real_board_list.append(f"  {colored(nums, Board.y)}")
+
+        return real_board_list
+
+    def debug_str(self) -> str:
+        """Returns a schematics representation of the 2d-list and the hexagonal board.
+
+        This method is only used for debugging purposes.
+
+        Parameters
+        ----------
+        None
+
+        Return
+        ------
+        debug_str: string
+            Represents the 2d-list and the actual hexagonal Abalone board.
+        """
+        dboard = self.debug_board()
+        rboard = self.real_board()
+        debug_str = "\n"
+        j = 2
+        k = 2 * j
+        sep = " "
+
+        for i, (row_dboard, row_rboard) in enumerate(zip(dboard, rboard)):
+            if i < math.floor(Board.dimension // 2):
+                full_row = f"{row_dboard} |  {k * sep}{row_rboard}\n"
+                k -= 1
+            elif i > math.floor(Board.dimension // 2):
+                full_row = f"{row_dboard} |  {j * sep}{row_rboard}\n"
+                j += 1
+            else:
+                full_row = f"{row_dboard} |   {row_rboard}\n"
+            debug_str += full_row
+
+        return debug_str
+
+    def __str__(self) -> str:
+        """Return a full representation of the object as a string.
         
         Parameter
         ---------
         None
         
-        Returns
+        Return
         -------
         full_representation: string
             Orientations schematics and current board's state
         """
-        orientations = colored("ORIENTATIONS", "white", attrs=["bold"])
-        board = colored("BOARD", "white", attrs=["bold"])
-        board_iter = iter(self.current_board_state())
-        dead_zone = colored("DEAD ZONE:", "white", attrs=["bold"])
+        orientations = Board.to_color("ORIENTATIONS", Board.w)
+        board = Board.to_color("BOARD", Board.w)
+        board_iter = iter(self.real_board())
+        
+        dead_zone = Board.to_color("DEAD-ZONE", Board.w)
         dead_red = f"Red: {14 - self.marbles[2]}"
-        dead_red = colored(dead_red, "red", attrs=["bold"])
+        dead_red = Board.to_color(dead_red, Board.r)
         dead_green = f"Green: {14 - self.marbles[3]}"
-        dead_green = colored(dead_green, "green", attrs=["bold"])
-        r_numbers = " ".join(list(colored(str(e), "yellow")
+        dead_green = Board.to_color(dead_green, Board.g)
+
+        r_numbers = " ".join(list(colored(str(e), Board.y)
                                   for e in range(1, 6)))
 
         full_representation = (
             f"""
           {orientations}                      {board}        {dead_zone}
-                                |    {next(board_iter)}      {dead_red}
-            NW     NE           |    {next(board_iter)}     {dead_green}
-              \   /             |    {next(board_iter)}
-               \ /              |    {next(board_iter)}
+                                |        {next(board_iter)}     {dead_red}
+            NW     NE           |       {next(board_iter)}    {dead_green}
+              \   /             |      {next(board_iter)}
+               \ /              |     {next(board_iter)}
         W ----- 0 ----- E       |    {next(board_iter)}
-               / \              |    {next(board_iter)}
-              /   \             |    {next(board_iter)}
-            SE     SW           |    {next(board_iter)}
-                                |    {next(board_iter)}
-                                |           {r_numbers}
+               / \              |     {next(board_iter)}
+              /   \             |      {next(board_iter)}
+            SW     SE           |       {next(board_iter)}
+                                |        {next(board_iter)}
+                                |         {next(board_iter)}
         """
         )
         return full_representation
@@ -414,8 +573,8 @@ class Board():
         orientation: string (positional)
             Orientation in which the next's spot is being computed
 
-        Returns
-        -------
+        Return
+        ------
         next spot: tuple of ints:
             new coordinates (row, col) in the 2d-list frame
         """
@@ -423,8 +582,8 @@ class Board():
         return next_spot
 
     @staticmethod
-    def to_2d_list(user_data):
-        """Converts coordinates of a given marble.
+    def to_2d_list(user_data) -> tuple:
+        """Converts coordinates of a given marble from the board to the nested list.
 
         Translates the coordinates of a given spot on the hexagonal
         board (i.e: "G3") into a valid row-column couple used by
@@ -435,22 +594,22 @@ class Board():
         coords_hexa: string (positional)
             Coordinates of a given spot on the hexagonal board
 
-        Returns
-        -------
+        Return
+        ------
         n_r, n_c: tuple (int)
             Coordinates of the given spot in the 2d-list (self.board)
         """
         r, c = user_data.upper()
         n_r = Board.char_2_num[r]
         if c in (Board.mid_point, Board.mid_point + 1):
-            n_c = int(c)
+            n_c = int(c) - 1
         else:
-            n_c = int(c) + (ord(r) - ord("A")) - (Board.mid_point + 1)
+            n_c = int(c) + (ord(r) - ord("A")) - Board.mid_point + 1
         return n_r, n_c
 
     @staticmethod
     def enemy(color):
-        """Compute the current enemy of the current color.
+        """Compute the enemy of the current color.
 
         Parameter
         ---------
@@ -475,8 +634,8 @@ class Board():
         user_data: tuple (positional)
             Range of marbles given by the user
             
-        Returns
-        -------
+        Return
+        ------
         is_diagonal: bool
             True if the range is a diagonal, False otherwise
         """        
@@ -497,8 +656,8 @@ class Board():
         user_data: tuple (positional)
             Range of marbles given by the user
             
-        Returns
-        -------
+        Return
+        ------
         is_horizontal: bool
             True if the range is horizontal, False otherwise
         """
@@ -510,74 +669,46 @@ class Board():
         )
         return is_horizontal
 
+def play_again() -> bool:
+    """Ask the user if he wants to keep playing.
 
-def main():
-    game_is_on = True
-    B = Board()
-    color = random.choice((2, 3))
-    game_over = False
-    while not game_over:
-        user_data, orientation = B.ask_move(color)
-        valid_move = B.update_board(user_data, orientation, 3)
-        if not valid_move:
+    Parameters
+    ----------
+    None
+
+    Return
+    ------
+    True if the user wants to play again, False otherwise
+    """
+    while True:
+        play_game = input('Play again (y/n)? : ')
+        if re.search(r'^y|n{1}$', play_game, re.IGNORECASE) is None:
+            print('Please enter \'y\', \'Y\', \'n\' or \'N\'')
             continue
-        color = B.enemy(color)
+        if re.search(r'^y{1}$', play_game, re.IGNORECASE):
+            play_again = True
+        elif re.search(r'^n{1}$', play_game, re.IGNORECASE):
+            play_again = False
 
+def main() -> None:
+    
+    while True:
+        B = Board()
+        color = random.choice((2, 3))
+        game_over = False
+        while not game_over:
+            user_data, orientation = B.ask_move(color)
+            valid_move = B.update_board(user_data, orientation, color)
+            if not valid_move:
+                continue
+            color = B.enemy(color)
+        if play_again():
+            continue
+        else:
+            print("Bye...")
+            break
 
 if __name__ == "__main__":
     main()
 
 
-# def board_debug(self):
-#     r, g, c, y = self.r, self.g, self.c, self.y
-
-#     j = 1
-#     k = self.middle
-#     l = self.dimension
-#     sp = " "  # space
-
-#     # 0: f = forbidden spot
-#     # 1: e = empty spot
-#     # 2: w = white marble
-#     # 3: b = black marble
-#     num_char = {
-#         "0": "f",
-#         "1": colored("o", attrs=["bold"]),
-#         "2": colored("#", r, attrs=["bold"]),  # ??
-#         "3": colored("x", g, attrs=["bold"])  # ??
-#     }
-
-#     current_board = f"{7 *sp}SQUARE {21* sp} HEXA\n"  # first line
-#     current_board = colored(current_board, attrs=["bold"])
-#     for i in range(self.dimension):
-#         l_row = list(
-#             num_char[str(e)] if e != 0 else " "
-#             for e in self.board[i]
-#         )
-#         current_board += f"{colored(i, c)} {sp.join(l_row)} {4 * sp}|   "
-#         letter = colored(str(chr(65 + i)), c)  # chr(65) = "A"
-
-#         if i < self.middle:
-#             str_to_add = f"{k * sp}{letter} {sp.join(l_row).rstrip()}\n"
-#             current_board += str_to_add
-#             k -= 1
-#         elif i > self.middle:
-#             str_to_add = f"{j * sp}{letter} {sp.join(l_row).lstrip()}"
-#             current_board += f"{str_to_add} {colored(l, y)}\n"
-#             j += 1
-#             l -= 1
-#         else:
-#             current_board += f"{letter} {sp.join(l_row)}\n"
-
-#     # numbers bottom debug
-#     l_number = list(
-#         colored(str(e), y)
-#         for e in range(0, 9)
-#     )
-#     # 13 to match the spaces
-#     r_numbers = " ".join(list(
-#         colored(str(e), y) for e in range(1, 6))
-#     )
-#     current_board += f"  {sp.join(l_number)} {13 * sp} {r_numbers}"
-
-#     return current_board
