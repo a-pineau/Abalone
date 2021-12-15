@@ -1,3 +1,7 @@
+# -------------------- #
+#    Abalone Board     #
+# -------------------- #
+
 import math
 import re
 import itertools
@@ -163,8 +167,8 @@ class Board():
         """
         color_word = "Red" if color == 2 else "Green"
         print(Board.to_color(f"{color_word}, it's your turn!",
-                             f"{color_word.lower()}"))
-        print(self)
+                             f"{color_word.lower()}") + "\n" + "-" * 22)
+        print(self.debug_str())
 
         valid_move = False
         while not valid_move:
@@ -199,7 +203,7 @@ class Board():
         valid_orientation = False
         while not valid_orientation:
             sep = ", "
-            orientation = input(f"Orientation ({sep.join(ori)})?: ").upper()
+            orientation = input(ask_messages("ASK_ORIENTATION")).upper()
             if orientation.upper() not in ori:
                 err_messages("ERR_ORIENTATION")
                 continue
@@ -257,6 +261,8 @@ class Board():
         """Count the number of marbles still alive. 
 
         This method is used to check any (red or green) winning condition.
+        Both players start with 14 marbles. One loses when 6 of his marbles
+        are out.
         
         Parameter
         ---------
@@ -601,10 +607,8 @@ class Board():
         """
         r, c = user_data.upper()
         n_r = Board.char_2_num[r]
-        if c in (Board.mid_point, Board.mid_point + 1):
-            n_c = int(c) - 1
-        else:
-            n_c = int(c) + (ord(r) - ord("A")) - Board.mid_point + 1
+        n_c = int(c) + (ord(r) - ord("A")) - Board.mid_point + 1
+
         return n_r, n_c
 
     @staticmethod
@@ -689,6 +693,7 @@ def play_again() -> bool:
             play_again = True
         elif re.search(r'^n{1}$', play_game, re.IGNORECASE):
             play_again = False
+        break
 
 def main() -> None:
     
@@ -699,9 +704,10 @@ def main() -> None:
         while not game_over:
             user_data, orientation = B.ask_move(color)
             valid_move = B.update_board(user_data, orientation, color)
+            game_over = B.check_win()
             if not valid_move:
                 continue
-            color = B.enemy(color)
+            color = color
         if play_again():
             continue
         else:

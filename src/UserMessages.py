@@ -14,6 +14,11 @@ def ask_messages(msg):
             msg_color,
             attrs=["bold"]
         ),
+        "ASK_ORIENTATION": colored(
+            "Orientation (W, E, NW, SE, NE, SW)? ",
+            msg_color,
+            attrs=["bold"]
+        ),
         "ASK_MOVEMENT": colored(
             "Do you want to push marbles or perform a free move?\n"
             + "P: push, F: free: ",
