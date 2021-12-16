@@ -31,4 +31,35 @@ def test_to_2d_list(user_data, expected_result):
     assert tB.to_2d_list(user_data) == expected_result, f"{msg}"
 
 # testing Board.push_move(friend, user_data, orientation, new_data)
+new_data_h1_nw = { # correct push move - no sumito
+    (9, 7): 1, 
+    (8, 6): 3, 
+    (7, 5): 3, 
+    (6, 4): 3,
+}
+new_data_a7_e = { # correct push move - suicide
+    (1, 3): 1,
+    (1, 4): 2,
+    (1, 5): 2,
+}
+new_data_i2_nw = { # wrong push move - incorrect sumito (nb enemy > nb friend)
+    # empty dict: could not be filled
+}
+new_data_i1_nw = { # wrong push_move - incorrect sumito (friend blocking)
+    # empty dict: could not be filled 
+}
+@pytest.mark.parametrize("friend, user_data, orientation,expected_result", 
+[
+    ("H3", "NW", new_data_h1_nw)
+])
+def test_push_move():
+    pass
 
+new_data_g3g4g5_ne = { 
+    (7, 5): 1,
+    (6, 5): 3,
+    (7, 6): 1,
+    (6, 6): 3,
+    (7, 7): 1,
+    (6, 7): 3,
+}

@@ -63,10 +63,10 @@ class Board():
         Update the current board if the move is possible
     check_win() -> bool
         Count the number of marbles still alive
-    push_move(friend, user_data, orientation, new_data) -> bool
+    push_move(friend, user_data, orientation) -> dict
         Compute the new positions of moving marbles by pushing
         Returns True if the move is valid
-    free_move(friend, user_data, orientation, new_data) -> bool
+    free_move(friend, user_data, orientation) -> dict
         Move a group of marbles in empty spots
         Returns True if the move is valid
     valid_neighborhood(marble, friend, enemy) -> list
@@ -144,6 +144,20 @@ class Board():
                       [0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 0],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
+    def set_test_board(self):
+        """Set a experimental board used to perform tests.
+
+        Paremeters
+        ----------
+        None
+
+        Return
+        ------
+        self.board: list (nested)
+            Attribute board
+        """
+        return self.board
+        
     def ask_move(self, color) -> tuple:
         """Ask the current player his move.
 
@@ -231,31 +245,27 @@ class Board():
 
         Return
         -------
-        valid_update: bool
-            It is possible that the player's move is incorrect.
-            For instance, a wrong sumito cannot be taken in consideration.
-            If valid_update is True, then the board is updated.
+        new_data: dict
+            Dict containing positions to be updated. However, it is
+            possible that the player's move is incorrect. For instance, 
+            a wrong sumito cannot be taken in consideration.
+            If new_data has been filled, then the board gets an update.
             Otherwise inputs are being asked again to the player.
         """
         new_data = dict()
-
         if len(user_data) > 1:
-            valid_update = self.free_move(color,
-                                          user_data,
-                                          orientation,
-                                          new_data)
+            new_data = self.free_move(color,user_data, orientation)
         else:
-            valid_update = self.push_move(color,
-                                          user_data,
-                                          orientation,
-                                          new_data)
+            new_data = self.push_move(color, user_data, orientation)
 
         # Updating board if possible
-        if valid_update:
+        if new_data:
             for key, value in new_data.items():
                 row, col = key
                 self.board[row][col] = value
-        return valid_update
+
+        print("new_data = ", new_data)    
+        return new_data
 
     def check_win(self) -> bool:
         """Count the number of marbles still alive. 
@@ -285,7 +295,7 @@ class Board():
         
         return game_over
                 
-    def push_move(self, friend, user_data, orientation, new_data):
+    def push_move(self, friend, user_data, orientation) -> dict:
         """Try to push marbles in a given direction.
 
         This method is used whenever the player wants to push multiple
@@ -297,22 +307,22 @@ class Board():
 
         Parameters
         ----------
+        friend: int
+            Current player's color
         user_data: tuple
             The first marble on which the push is being performed
         orientation: string
             The orientation in which the push is being performed
-        new_data: dict
-            dict of key:value pairs tuple:int where the tuples
-            represent the new positions or marbles and their new value
 
         Return
         ------
-        bool
-            True if the move is valid, False otherwise
+        new_data: dict
+            dict of key:value pairs tuple:int where the tuples
+            represent the new positions or marbles and their new value
         """
         enemy = self.enemy(friend)
         r, c = self.to_2d_list(user_data[0])
-        new_data[(r, c)] = 1  # the first marble becomes empty
+        new_data = {(r, c): 1}  # the first marble becomes empty
         colors = [self.board[r][c]]
 
         while self.board[r][c] != Board.free:
@@ -328,7 +338,8 @@ class Board():
             # cannot push more than 3 marbles
             if too_much_marbles:
                 err_messages("ERR_TOO_MUCH")
-                return False
+                new_data.clear()
+                break
             # next spot is always friendly, except deadzone
             if current_spot == friend:
                 if next_spot in (friend, enemy, Board.free):
@@ -353,12 +364,14 @@ class Board():
             # performing a wrong sumito
             if wrong_sumito:
                 err_messages("ERR_SUMITO")
-                return False
+                new_data.clear()
+                break
 
             r, c = n_r, n_c
-        return True
 
-    def free_move(self, friend, user_data, orientation, new_data) -> bool:
+        return new_data
+
+    def free_move(self, friend, user_data, orientation) -> bool:
         """Try to freely move marbles in a given direction.
 
         This method is used whenever the player wants to freely multiple
@@ -370,20 +383,22 @@ class Board():
 
         Parameters
         ----------
+        friend: int
+            Current player's color
         user_data: tuple
             The first marble on which the push is being performed
         orientation: string
             The orientation in which the push is being performed
-        new_data: dict
-            dict of key:value pairs tuple:int where the tuples
-            represent the new positions or marbles and their new value
 
         Return
         ------
-        bool
-            True if the move is valid, False otherwise
+        new_data: dict
+            dict of key:value pairs tuple:int where the tuples
+            represent the new positions or marbles and their new value
         """
         enemy = self.enemy(friend)
+        new_data = dict()
+
         for element in user_data:
             valid_neighbors = self.valid_neighborhood(element, 
                                                       friend,
@@ -392,7 +407,8 @@ class Board():
             n_r, n_c = self.next_spot(r, c, orientation)
             if (n_r, n_c) not in valid_neighbors:
                 err_messages("ERR_EMPTY_SPOT")
-                return False
+                new_data.clear()
+                break
             new_data[(r, c)] = 1
             if self.board[n_r][n_c] == 1:
                 new_data[(n_r, n_c)] = friend
@@ -400,7 +416,7 @@ class Board():
                 info_messages("INFO_SUICIDE")
                 self.marbles[friend] -= 1
 
-        return True
+        return new_data
 
     def valid_neighborhood(self, marble, friend, enemy) -> list:
         """Compute where a given marble can move.
