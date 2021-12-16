@@ -118,6 +118,9 @@ class Board():
         "3": to_color("x", g) 
     }
 
+    # constructor
+    # ---------------------------------------------------------------------
+
     def __init__(self):
         """Constructor. Initializes the board and a marbles counter.
 
@@ -144,20 +147,9 @@ class Board():
                       [0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 0],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
-    def set_test_board(self):
-        """Set a experimental board used to perform tests.
+    # methods
+    # ---------------------------------------------------------------------
 
-        Paremeters
-        ----------
-        None
-
-        Return
-        ------
-        self.board: list (nested)
-            Attribute board
-        """
-        return self.board
-        
     def ask_move(self, color) -> tuple:
         """Ask the current player his move.
 
@@ -582,6 +574,23 @@ class Board():
         )
         return full_representation
 
+    def set_test_board(self):
+        """Set an experimental board used to perform tests.
+
+        Paremeters
+        ----------
+        None
+
+        Return
+        ------
+        self.board: list (nested)
+            Attribute board
+        """
+        return self.board
+
+    # static methods
+    # ---------------------------------------------------------------------
+
     @staticmethod
     def next_spot(r, c, orientation) -> tuple:
         """Compute the next spot of a given one.
@@ -600,7 +609,7 @@ class Board():
         next spot: tuple of ints:
             new coordinates (row, col) in the 2d-list frame
         """
-        next_spot = Board.disp[orientation](r, c)
+        next_spot = Board.disp[orientation.upper()](r, c)
         return next_spot
 
     @staticmethod
