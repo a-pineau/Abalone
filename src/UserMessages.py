@@ -9,6 +9,16 @@ def ask_messages(msg):
     """
     msg_color = "white"
     ask_msgs = {
+        "ASK_MARBLES": colored(
+            "Pick your marble(s) (A-I, 0-8): ",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "ASK_ORIENTATION": colored(
+            "Orientation (W, E, NW, SE, NE, SW)? ",
+            msg_color,
+            attrs=["bold"]
+        ),
         "ASK_MOVEMENT": colored(
             "Do you want to push marbles or perform a free move?\n"
             + "P: push, F: free: ",
@@ -96,12 +106,22 @@ def info_messages(msg):
     msg_color = "yellow"
     info_msgs = {
         "INFO_SUICIDE": colored(
-            "You\'ve killed your own marble, GGs.",
+            "You\'ve killed your own marble(s). Nice.",
             msg_color,
             attrs=["bold"]
         ),
         "INFO_KILL_ENEMY": colored(
             "You've killed an enemy marble!",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "INFO_RED_WINS": colored(
+            "Red marbles win the game!",
+            msg_color,
+            attrs=["bold"]
+        ),
+        "INFO_GREEN_WINS": colored(
+            "Green marbles win the game!",
             msg_color,
             attrs=["bold"]
         )
