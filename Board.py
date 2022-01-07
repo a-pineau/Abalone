@@ -11,7 +11,6 @@ from more_itertools import sliced
 from termcolor import colored
 from UserMessages import ask_messages, err_messages, info_messages
 
-
 class Board():
     """
     A class used to represent a standard Abalone board.
@@ -111,7 +110,7 @@ class Board():
         print(colored(f"{color_word}, it's your turn!",
                       f"{color_word.lower()}",
                       attrs=["bold"]))
-        print(self)
+        print(self.board_debug())
 
         valid_move = False
         while not valid_move:
@@ -145,6 +144,8 @@ class Board():
         ori = ["W", "E", "NW", "SE", "NE", "SW"]
         valid_orientation = False
         while not valid_orientation:
+            if not valid_orientation:
+                print(self.ask_m)
             sep = ", "
             orientation = input(f"Orientation ({sep.join(ori)})?: ").upper()
             if orientation.upper() not in ori:
@@ -165,12 +166,12 @@ class Board():
 
         Parameters
         ----------
-        user_data: tuple of strings (required)
+        user_data: tuple of strings (positional)
             Inputs given by the user and describe its move
+        orientation: string (positional)
+            The orientation in which the board is being updated
         color: int (required):
             Current player's color
-        enemy: int (required)
-            Current's player enemy
 
         Returns
         -------
@@ -216,6 +217,8 @@ class Board():
             next_spot = self.board[n_r][n_c]
             colors.append(next_spot)
 
+            print("f", friend, "e", enemy)
+            print("colors=", colors)
             sumito = enemy in colors
             too_much_marbles = colors.count(friend) > 3
             wrong_sumito = colors.count(enemy) >= colors.count(friend)
@@ -224,25 +227,26 @@ class Board():
             if too_much_marbles:
                 err_messages("ERR_TOO_MUCH")
                 return False
-            # next spot is always friendly, except deadzone
+            # next spot is always friendly, except dead-zone
             if current_spot == friend:
                 if next_spot in (friend, enemy, empty):
                     new_data[(n_r, n_c)] = friend
                 else:
-                    # friend pushed to deadzone
+                    # friend pushed to dead-zone
                     info_messages("INFO_SUICIDE")
-                    Board.marbles[friend] -= 1
+                    self.marbles[friend] -= 1
                     break
             # next spot depends on the sumito
             elif current_spot == enemy:
                 if next_spot in (enemy, empty):
                     new_data[(n_r, n_c)] = enemy if sumito else enemy
                 elif next_spot == friend:
+                    print("heyyyy")
                     wrong_sumito = True
                 else:
-                    # enemy pushed to deadzone
+                    # enemy pushed to dead-zone
                     info_messages("INFO_KILL_ENEMY")
-                    Board.marbles[enemy] -= 1
+                    self.marbles[enemy] -= 1
                     break
 
             # performing a wrong sumito
@@ -275,7 +279,7 @@ class Board():
             except IndexError:
                 info_messages("INFO_SUICIDE")
                 new_data[(r, c)] = 1
-                Board.marbles[friend] -= 1
+                self.marbles[friend] -= 1
                 
         return True
 
@@ -510,6 +514,60 @@ class Board():
         )
         return is_horizontal
 
+    def board_debug(self):
+        r, g, c, y = "red", "green", "cyan", "yellow"
+
+        j = 1
+        k = Board.mid_point
+        l = Board.dimension
+        sp = " "  # space
+
+        # 0: f = forbidden spot
+        # 1: e = empty spot
+        # 2: w = white marble
+        # 3: b = black marble
+        num_char = {
+            "0": "f",
+            "1": colored("o", attrs=["bold"]),
+            "2": colored("#", r, attrs=["bold"]),  # ??
+            "3": colored("x", g, attrs=["bold"])  # ??
+        }
+
+        current_board = f"{7 *sp}SQUARE {21* sp} HEXA\n"  # first line
+        current_board = colored(current_board, attrs=["bold"])
+        for i in range(Board.dimension):
+            l_row = list(
+                num_char[str(e)] if e != 0 else " "
+                for e in self.board[i]
+            )
+            current_board += f"{colored(i, c)} {sp.join(l_row)} {4 * sp}|   "
+            letter = colored(str(chr(65 + i)), c)  # chr(65) = "A"
+
+            if i < Board.mid_point:
+                str_to_add = f"{k * sp}{letter} {sp.join(l_row).rstrip()}\n"
+                current_board += str_to_add
+                k -= 1
+            elif i > Board.mid_point:
+                str_to_add = f"{j * sp}{letter} {sp.join(l_row).lstrip()}"
+                current_board += f"{str_to_add} {colored(l, y)}\n"
+                j += 1
+                l -= 1
+            else:
+                current_board += f"{letter} {sp.join(l_row)}\n"
+
+        # numbers bottom debug
+        l_number = list(
+            colored(str(e), y)
+            for e in range(0, 9)
+        )
+        # 13 to match the spaces
+        r_numbers = " ".join(list(
+            colored(str(e), y) for e in range(1, 6))
+        )
+        current_board += f"  {sp.join(l_number)} {13 * sp} {r_numbers}"
+
+        return current_board
+
 
 def main():
     game_is_on = True
@@ -517,11 +575,11 @@ def main():
     color = random.choice((2, 3))
     game_over = False
     while not game_over:
-        user_data, orientation = B.ask_move(color)
+        user_data, orientation = B.ask_move(2)
         valid_move = B.update_board(user_data, orientation, 3)
         if not valid_move:
             continue
-        color = B.enemy(color)
+        color = 3
 
 
 if __name__ == "__main__":
